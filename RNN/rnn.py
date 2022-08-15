@@ -1,50 +1,84 @@
 import torch
 import torch.nn as nn
-import  torch.nn.functional as F
 
 
 __author__ = "__Girish_Hegde__"
 
 
 class RNNCell(nn.Module):
-    def __init__(self, input_size, hidden_size, bias=True, nonlinearity='tanh'):
+    def __init__(self, input_size, hidden_size, bias=True, nonlinearity=nn.Tanh):
         super().__init__()
-        # h = act(wh.h + bh + wx.x + bx)
+        """ RNNCell
+            h = act(wh.h + bh + wx.x + bx)
+            y = act(wy.h + by)
+            author: girish d. hegde
+
+        Args:
+            input_size (int): input size.
+            hidden_size (int): hidden size.
+            bias (bool): add bias.
+            nonlinearity (nn.Module): activation function.
+        """
         self.i2h = nn.Linear(input_size, hidden_size, bias=bias)
         self.h2h = nn.Linear(hidden_size, hidden_size, bias=bias)
         self.h2o = nn.Linear(hidden_size, hidden_size, bias=bias)
-        self.nonlinearity = getattr(F, nonlinearity)
+        self.hact = nonlinearity()
+        self.yact = nonlinearity()
 
     def forward(self, input, hidden):
+        """
+        Args:
+            input (torch.tensor): [b, l] - input data.
+            hidden (torch.tensor): [b, h] - hidden state.
+
+        Returns:
+            tuple(torhc.tensor):
+                torch.tensor: [b, h] - output.
+                torch.tensor: [b, h] - updated hidden state.
+        """
         h = self.i2h(input) + self.h2h(hidden)
-        o = self.h2o(h)
-        return o, self.nonlinearity(h)
+        y = self.h2o(h)
+        return self.yact(y), self.hact(h)
 
 
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, ):
         super().__init__()
+        """ RNN
+            author: girish d. hegde
 
-        rnns = [RNNCell(input_size, hidden_size)]  + \
+        Args:
+            input_size (int): input size.
+            hidden_size (int): hidden size.
+            num_layers (int): number of rnn layers.
+        """
+        rnncells = [RNNCell(input_size, hidden_size)]  + \
             [RNNCell(hidden_size, hidden_size) for _ in range(num_layers - 1)]
-        self.rnns = nn.ModuleList(rnns)
+        self.rnncells = nn.ModuleList(rnncells)
         self.hidden_size = hidden_size
 
     def forward(self, x):
-        hidden = self.init_hidden(x.shape[1])
-        # out = []
-        out = torch.zeros(x.shape[0], x.shape[1], self.hidden_size)
-        for timestep in range(x.shape[0]):
-            output = x[timestep]
-            for rnn_layer in self.rnns:
-                output, hidden = rnn_layer(output, hidden)
-            out[timestep] = output
-            # out.append(output)
-        # out = torch.stack(out)
-        return out, hidden
+        """
+        Args:
+            x (torch.tensor): [timesteps, batchsize, input_size] - input data.
 
-    def init_hidden(self, batch_size):
-        return torch.zeros(batch_size, self.hidden_size)
+        Returns:
+            tuple(torch.tensor):
+                torch.tensor: [timestep, batchsize, hidden_size] - output.
+                torch.tenosr: [num_layers, batchsize, hidden_size] - hidden state.
+        """
+        t, b, l = x.shape
+        hidden = self.init_hidden(len(self.rnncells), b)
+        out = []
+        for timestep in range(t):
+            output = x[timestep]
+            for i, rnn_layer in enumerate(self.rnncells):
+                output, hidden[i] = rnn_layer(output, hidden[i].clone())
+            out.append(output)
+        return torch.stack(out), hidden
+
+    def init_hidden(self, num_layers, batch_size):
+        return torch.zeros(num_layers, batch_size, self.hidden_size)
 
 
 if __name__ == '__main__':
@@ -59,4 +93,6 @@ if __name__ == '__main__':
 
     inp = torch.randn(timesteps, bs, input_size)
     out, hdn = net(inp)
-    print(out.shape)
+    out.sum().backward()
+    print(f'{out.shape = }')
+    print(f'{hdn.shape = }')
