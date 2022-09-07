@@ -47,6 +47,10 @@ class RNN(nn.Module):
         """ RNN
             author: girish d. hegde
 
+        Refs:
+            https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
+            https://pytorch.org/docs/stable/generated/torch.nn.RNN.html
+
         Args:
             input_size (int): input size.
             hidden_size (int): hidden size.
@@ -68,7 +72,7 @@ class RNN(nn.Module):
                 torch.tenosr: [num_layers, batchsize, hidden_size] - hidden state.
         """
         t, b, l = x.shape
-        hidden = self.init_hidden(len(self.rnncells), b)
+        hidden = self.init_hidden(len(self.rnncells), b).to(x.device)
         out = []
         for timestep in range(t):
             output = x[timestep]
