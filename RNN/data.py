@@ -79,6 +79,8 @@ if __name__ == '__main__':
     from torch.utils.data import DataLoader
     wordset = WordSet('./data/sanskrit_words.txt', 'cuda')
     print('Total data samples = ', len(wordset))
+    print(f'Vocab size = {wordset.vocab_size}')
+    print(f'Total characters = {sum(wordset.chars_per_word)}')
     loader = DataLoader(wordset, batch_size=4, collate_fn=same_timesteps_collate_fn, shuffle=True)
     loader = iter(loader)
     inputs, labels, nchars = next(loader)
@@ -86,7 +88,8 @@ if __name__ == '__main__':
 
     from rnn import RNN
     net = RNN(wordset.vocab_size, 512, 10).cuda()
-    out, hdn = net(inputs.permute(1, 0, 2))
+    hdn = net.init_hidden(inputs.shape[0], inputs.device)
+    out, hdn = net(inputs.permute(1, 0, 2), hdn)
     out.sum().backward()
     print(f'{out.shape = }')
     print(f'{hdn.shape = }')

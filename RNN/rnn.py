@@ -60,11 +60,13 @@ class RNN(nn.Module):
             [RNNCell(hidden_size, hidden_size) for _ in range(num_layers - 1)]
         self.rnncells = nn.ModuleList(rnncells)
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
-    def forward(self, x):
+    def forward(self, x, hidden):
         """
         Args:
             x (torch.tensor): [timesteps, batchsize, input_size] - input data.
+            hidden (torch.tensor): [num_layers, batchsize, hidden_size] - input hidden state.
 
         Returns:
             tuple(torch.tensor):
@@ -72,7 +74,6 @@ class RNN(nn.Module):
                 torch.tenosr: [num_layers, batchsize, hidden_size] - hidden state.
         """
         t, b, l = x.shape
-        hidden = self.init_hidden(len(self.rnncells), b).to(x.device)
         out = []
         for timestep in range(t):
             output = x[timestep]
@@ -81,22 +82,41 @@ class RNN(nn.Module):
             out.append(output)
         return torch.stack(out), hidden
 
-    def init_hidden(self, num_layers, batch_size):
-        return torch.zeros(num_layers, batch_size, self.hidden_size)
+    def init_hidden(self, batch_size, device='cpu'):
+        return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
+
+
+class CharRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers=2, dropout=0.1):
+        super().__init__()
+        self.rnn = RNN(input_size, hidden_size, num_layers)
+        self.dropout = nn.Dropout(p=dropout)
+        self.fc = nn.Linear(hidden_size, input_size)
+
+
+    def forward(self, x, hidden):
+        output, hdn = self.rnn(x, hidden)
+        output = self.dropout(output)
+        output = self.fc(output)
+        return output, hdn
 
 
 if __name__ == '__main__':
     bs = 4
-    timesteps = 3
-    num_layers = 2
-    input_size = 10
-    hidden_size = 20
+    timesteps = 5
+    num_layers = 3
+    input_size = 26
+    hidden_size = 64
 
-    net = RNN(input_size, hidden_size, num_layers)
+    # net = RNN(input_size, hidden_size, num_layers)
+    net = CharRNN(input_size, hidden_size, num_layers)
+    params = sum(p.numel() for p in net.parameters())
     print(net)
+    print(f'total parameters = {params} = {params/1e6}M')
 
     inp = torch.randn(timesteps, bs, input_size)
-    out, hdn = net(inp)
+    hdn = net.rnn.init_hidden(inp.shape[1], inp.device)
+    out, hdn = net(inp, hdn)
     out.sum().backward()
     print(f'{out.shape = }')
     print(f'{hdn.shape = }')
