@@ -28,10 +28,10 @@ class WordSet(Dataset):
         chars = list(set(allchars))
         chars.append('eow')  # end of word
         self.vocab_size = len(chars)
-        int2char = dict(enumerate(chars))
-        char2int = {ch: ii for ii, ch in int2char.items()}
+        self.int2char = dict(enumerate(chars))
+        self.char2int = {ch: ii for ii, ch in self.int2char.items()}
         # generate one-hot char and word embeddings
-        self.encoded = [[char2int[ch] for ch in word] + [self.vocab_size - 1, ] for word in text]
+        self.encoded = [[self.char2int[ch] for ch in word] + [self.vocab_size - 1, ] for word in text]
         self.embeddings = torch.eye(self.vocab_size).float().to(device)
         self.word_embeddings = [self.embeddings[enc] for enc in self.encoded]
         self.chars_per_word = [len(word) for word in text]

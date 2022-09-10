@@ -93,7 +93,6 @@ class CharRNN(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.fc = nn.Linear(hidden_size, input_size)
 
-
     def forward(self, x, hidden):
         output, hdn = self.rnn(x, hidden)
         output = self.dropout(output)
