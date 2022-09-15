@@ -89,7 +89,10 @@ class RNN(nn.Module):
 class CharRNN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=2, dropout=0.1):
         super().__init__()
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
         self.rnn = RNN(input_size, hidden_size, num_layers)
+        # self.rnn = nn.RNN(input_size, hidden_size, num_layers)
         self.dropout = nn.Dropout(p=dropout)
         self.fc = nn.Linear(hidden_size, input_size)
 
@@ -98,6 +101,9 @@ class CharRNN(nn.Module):
         output = self.dropout(output)
         output = self.fc(output)
         return output, hdn
+
+    def init_hidden(self, batch_size, device='cpu'):
+        return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
 
 
 if __name__ == '__main__':
