@@ -1,30 +1,25 @@
-import os
-import time
 from pathlib import Path
 
-import numpy as np
 import torch
 
 from rnn import CharRNN
-from data import WordSet
 from utils import sample
+
 
 __author__ = "__Girish_Hegde__"
 
 
-HIDDEN_SIZE = 512
-NUM_LAYERS = 3
-LOAD = Path('./data/runs/checkpoint_990.pt')
-
+CKPT = Path('./data/runs/best.pt')
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-wordset = WordSet('./data/sanskrit_words.txt', DEVICE)
-int2char, char2int, embeddings = wordset.int2char, wordset.char2int, wordset.embeddings
+ckpt = torch.load(CKPT, map_location=DEVICE)
+net = CharRNN(ckpt['tokens'], ckpt['HIDDEN_SIZE'], ckpt['NUM_LAYERs'])
+net.load_state_dict(ckpt['state_dict'])
+net = net.to(DEVICE)
+print('Checkpoint loaded successfully ...')
 
-net = CharRNN(wordset.vocab_size, HIDDEN_SIZE, NUM_LAYERS).to(DEVICE)
-load = torch.load(LOAD)
-net.load_state_dict(load['state_dict'])
+pred = sample(net, ckpt['int2char'], top_k=3, prime=None, max_size=20, device='cpu', eow='<E>')
+print(f'prediction: {pred}')
 
-inp = 'ind'
-prediction = sample(net, int2char, char2int, embeddings, top_k=1, prime=inp, max_size=12, device=DEVICE)
-print(f'input: {inp}, prediction: {prediction}')
+
+# TODO: BiGram viz, word2class validation and collate func, code standardization, citation
