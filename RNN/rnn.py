@@ -1,3 +1,12 @@
+"""
+Refs:
+    https://youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ
+    http://karpathy.github.io/2015/05/21/rnn-effectiveness/
+    https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
+    https://pytorch.org/docs/stable/generated/torch.nn.RNN.html
+"""
+
+
 import torch
 import torch.nn as nn
 
@@ -12,6 +21,11 @@ class RNNCell(nn.Module):
             h = act(wh.h + bh + wx.x + bx)
             y = act(wy.h + by)
             author: girish d. hegde
+
+        Refs:
+            http://karpathy.github.io/2015/05/21/rnn-effectiveness/
+            https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
+            https://pytorch.org/docs/stable/generated/torch.nn.RNN.html
 
         Args:
             input_size (int): input size.
@@ -48,6 +62,7 @@ class RNN(nn.Module):
             author: girish d. hegde
 
         Refs:
+            http://karpathy.github.io/2015/05/21/rnn-effectiveness/
             https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
             https://pytorch.org/docs/stable/generated/torch.nn.RNN.html
 

@@ -1,3 +1,10 @@
+"""
+Refs:
+    https://youtu.be/PaCmpygFfXo
+    https://www.kaggle.com/code/ashukr/char-rnn/notebook
+"""
+
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -117,3 +124,5 @@ def sample(net, int2char, top_k=1, prime=None, max_size=12, device='cpu', eow='<
     chars = chars if chars[-1] != eow else chars[:-1]
 
     return ''.join(chars)
+
+
