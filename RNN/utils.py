@@ -6,6 +6,7 @@ Refs:
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 
@@ -126,3 +127,71 @@ def sample(net, int2char, top_k=1, prime=None, max_size=12, device='cpu', eow='<
     return ''.join(chars)
 
 
+@torch.no_grad()
+def get_BiGram(net, int2char, device='cpu'):
+    """ Function to get Bigram model/table from RNN.
+        author: girish d. hegde
+
+    Refs:
+        https://youtu.be/PaCmpygFfXo
+
+    Args:
+        net (torch.nn.Module): trained model.
+        int2char (dict[int:str]): integer to character/token lookup.
+        device (torch.device): cpu or cuda.
+
+    Returns:
+        np.array[float]: [vocab_size, vocab_size] - BiGram model.
+    """
+    char2int = {ch: i for i, ch in int2char.items()}
+    embeddings = torch.eye(len(int2char)).float().to(device)
+    bigram = []
+
+    net = net.to(device)
+    net.eval()
+
+    # Next character prediction
+    for ch, enc in char2int.items():
+        emb = embeddings[enc]
+        inp = emb[None, None, :]  # shape = [timesteps = 1, bs = 1, vocabsize]
+        # get prediction from nn
+        hidden = net.init_hidden(1, inp.device)
+        pred, hidden = net(inp, hidden)
+        # get probability of next chars
+        prob = F.softmax(pred[:, 0, :], -1).data.cpu()
+        prob = prob.numpy().squeeze()
+        bigram.append(prob)
+    bigram = np.array(bigram)
+
+    return bigram
+
+
+def BiGram_viz(bigram, int2char, filename=None):
+    """ Function to visualize Bigram model/table.
+        author: girish d. hegde
+
+    Refs:
+        https://youtu.be/PaCmpygFfXo
+
+    Args:
+        bigram (np.array[float]): [vocab_size, vocab_size] - BiGram model.
+        int2char (dict[int:str]): integer to character/token lookup.
+
+    Returns:
+        plt.figure: BiGram visualization plot.
+    """
+    vocab_size = len(int2char)
+    fig = plt.figure(figsize=(6, 6), constrained_layout=True)
+    plt.imshow(bigram, cmap='Reds')
+    for i in range(vocab_size):
+        for j in range(vocab_size):
+            chstr = f'{int2char[i]}-{int2char[j]}'
+            plt.text(j, i, chstr, ha="center", va="bottom", color='black', fontsize=3)
+            plt.text(j, i, f'{bigram[i, j]:.1}', ha="center", va="top", color='black', fontsize=3)
+    plt.axis('off')
+    plt.show()
+
+    if filename is not None:
+        fig.savefig(filename, dpi=1200)
+
+    return fig
