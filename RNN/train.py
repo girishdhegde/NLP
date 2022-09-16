@@ -25,6 +25,7 @@ LOGDIR = Path('./data/runs')
 PRINT_FREQ = 100  # print info. frequency wrt iterations.
 SAVE_FREQ = 10  # checkpoint and log save frequency wrt epochs.
 
+DATAPATH = './data/datasets/names.txt'
 LOAD = Path('./data/runs/best.pt')  # or None
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -32,14 +33,14 @@ LOGDIR.mkdir(parents=True, exist_ok=True)
 
 
 # textset = Word2ClassSet('../data/names', DEVICE)
-textset = Word2WordSet('../data/names.txt', DEVICE)
+textset = Word2WordSet(DATAPATH, DEVICE)
 iterations = (len(textset)//BATCH_SIZE) + 1
 print('Total training samples = ', len(textset))
 print(f'Vocab size = {textset.vocab_size}')
 
 net = CharRNN(textset.vocab_size, HIDDEN_SIZE, NUM_LAYERS, dropout=0)
 net, best, int2char, start_epoch = load_checkpoint(LOAD, net, DEVICE)
-textset = Word2WordSet('../data/names.txt', DEVICE, int2char) if int2char is not None else textset
+textset = Word2WordSet(DATAPATH, DEVICE, int2char) if int2char is not None else textset
 net.to(DEVICE)
 params = sum(p.numel() for p in net.parameters())
 print(f'Total model parameters = {params} = {params/1e6}M')

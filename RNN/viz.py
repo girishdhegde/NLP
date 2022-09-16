@@ -25,5 +25,5 @@ net = net.to(DEVICE)
 print('Checkpoint loaded successfully ...')
 
 bigram = get_BiGram(net, ckpt['int2char'])
-BiGram_viz(bigram, ckpt['int2char'], filename='./data/bigram.png')
+BiGram_viz(bigram, ckpt['int2char'], filename='./data/viz/bigram.png')
 
