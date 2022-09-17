@@ -58,10 +58,9 @@ for epoch in range(start_epoch, EPOCHS):
         inp, target = inp.permute(1, 0, 2), target.permute(1, 0, 2)
         timesteps, bs, inpsize = inp.shape
         # hdn = net.rnn.init_hidden(bs, DEVICE)
-        hdn = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
-
         optimizer.zero_grad()
-        pred, hdn = net(inp, hdn)
+        # hdn = net.init_hidden(bs, DEVICE)
+        pred, hdn = net(inp, None)
         # pred = pred.permute(1, 0, 2)
 
         loss = criterion(pred.reshape(-1, inpsize), target.reshape(-1, inpsize))

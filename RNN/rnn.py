@@ -33,13 +33,14 @@ class RNNCell(nn.Module):
             bias (bool): add bias.
             nonlinearity (nn.Module): activation function.
         """
+        self.hidden_size = hidden_size
         self.i2h = nn.Linear(input_size, hidden_size, bias=bias)
         self.h2h = nn.Linear(hidden_size, hidden_size, bias=bias)
         self.h2o = nn.Linear(hidden_size, hidden_size, bias=bias)
         self.hact = nonlinearity()
         self.yact = nonlinearity()
 
-    def forward(self, input, hidden):
+    def forward(self, input, hidden=None):
         """
         Args:
             input (torch.tensor): [b, l] - input data.
@@ -50,9 +51,13 @@ class RNNCell(nn.Module):
                 torch.tensor: [b, h] - output.
                 torch.tensor: [b, h] - updated hidden state.
         """
+        hidden = self.init_hidden(input.shape[0], input.device) if hidden is None else hidden
         h = self.i2h(input) + self.h2h(hidden)
         y = self.h2o(h)
         return self.yact(y), self.hact(h)
+
+    def init_hidden(self, batch_size, device='cpu'):
+        return torch.zeros(batch_size, self.hidden_size, device=device)
 
 
 class RNN(nn.Module):
@@ -77,11 +82,11 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
 
-    def forward(self, x, hidden):
+    def forward(self, x, hidden=None):
         """
         Args:
             x (torch.tensor): [timesteps, batchsize, input_size] - input data.
-            hidden (torch.tensor): [num_layers, batchsize, hidden_size] - input hidden state.
+            hidden (list[torch.tensor]): [[batchsize, hidden_size] tensor for cell in self.rnncells] - hidden states.
 
         Returns:
             tuple(torch.tensor):
@@ -90,15 +95,17 @@ class RNN(nn.Module):
         """
         t, b, l = x.shape
         out = []
+        hidden = self.init_hidden(b, x.device) if hidden is None else hidden
         for timestep in range(t):
             output = x[timestep]
             for i, rnn_layer in enumerate(self.rnncells):
-                output, hidden[i] = rnn_layer(output, hidden[i].clone())
+                output, hidden[i] = rnn_layer(output, hidden[i])
             out.append(output)
         return torch.stack(out), hidden
 
     def init_hidden(self, batch_size, device='cpu'):
-        return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
+        return [cell.init_hidden(batch_size, device) for cell in self.rnncells]
+        # return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
 
 
 class CharRNN(nn.Module):
@@ -111,14 +118,15 @@ class CharRNN(nn.Module):
         self.dropout = nn.Dropout(p=dropout)
         self.fc = nn.Linear(hidden_size, input_size)
 
-    def forward(self, x, hidden):
+    def forward(self, x, hidden=None):
+        hidden = self.init_hidden(x.shape[1], x.device) if hidden is None else hidden
         output, hdn = self.rnn(x, hidden)
         output = self.dropout(output)
         output = self.fc(output)
         return output, hdn
 
     def init_hidden(self, batch_size, device='cpu'):
-        return torch.zeros(self.num_layers, batch_size, self.hidden_size, device=device)
+        return self.rnn.init_hidden(batch_size, device)
 
 
 if __name__ == '__main__':
@@ -129,14 +137,14 @@ if __name__ == '__main__':
     hidden_size = 64
 
     # net = RNN(input_size, hidden_size, num_layers)
-    net = CharRNN(input_size, hidden_size, num_layers)
+    net = CharRNN(input_size, hidden_size, num_layers).cuda()
     params = sum(p.numel() for p in net.parameters())
     print(net)
     print(f'total parameters = {params} = {params/1e6}M')
 
-    inp = torch.randn(timesteps, bs, input_size)
-    hdn = net.rnn.init_hidden(inp.shape[1], inp.device)
-    out, hdn = net(inp, hdn)
+    inp = torch.randn(timesteps, bs, input_size).cuda()
+    # hdn = net.rnn.init_hidden(inp.shape[1], inp.device)
+    out, hdn = net(inp, None)
     out.sum().backward()
     print(f'{out.shape = }')
-    print(f'{hdn.shape = }')
+    print(f'{hdn[0].shape = }')
