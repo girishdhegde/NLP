@@ -198,28 +198,19 @@ class TextSet(Dataset):
         author: girish d. hegde
 
     Args:
-        filename (str): .txt filepath.
+        words (list[str]): list of tokens/words in corpus.
+        int2token (dict[int:str]): integer to token lookup.
+        seq_len (int): sequence length.
         device (torch.device/str):  torch data device 'cuda' or 'cpu'.
     """
-    def __init__(self, filename, sequence_length=50, device='cuda'):
+    def __init__(self, words, int2token, seq_len=50, device='cuda'):
         super().__init__()
-        with open(filename, encoding='utf-8') as fp:
-            text = fp.read()
-        text = text.replace('\n', '')
-        # text = re.sub('[^A-Za-z0-9]+', '', text)
-        text = text.lower()
-
-        # generate char to int dictionary/lookup tables
-        chars = list(set(text))
-        self.sequence_length = sequence_length
-        self.vocab_size = len(chars)
-        self.int2char = dict(enumerate(chars))
-        self.char2int = {ch: ii for ii, ch in self.int2char.items()}
-        # generate one-hot char and word embeddings
-        self.encoded = [self.char2int[ch] for ch in text]
-        self.embeddings = torch.eye(self.vocab_size).float().to(device)
-        self.char_embeddings = torch.stack([self.embeddings[enc] for enc in self.encoded])
-        self.len = len(text) - (sequence_length + 1)
+        token2int = {tk:i for i, tk in int2token.items()}
+        self.vocab_size = len(int2token)
+        self.seq_len = seq_len
+        self.encoded = torch.tensor([token2int[token] for token in words], dtype=torch.int32, device=device)
+        self.one_hot = torch.eye((self.vocab_size, self.vocab_size), dtype=torch.float32, device=device)
+        self.len = len(words) - (seq_len + 1)
 
     def __len__(self):
         return self.len
@@ -227,9 +218,9 @@ class TextSet(Dataset):
     def __getitem__(self, index):
         """
         Returns:
-            torch.tensor: [timesteps, vocab_size] - input char embeddings.
-            torch.tensor: [timesteps, vocab_size] - label char embeddings.
+            torch.tensor: [seq_len, ] - input tokens encoding.
+            torch.tensor: [seq_len, vocab_size] - ouput token onehot embedding.
         """
         start = random.randint(0, self.len)
-        end = start + self.sequence_length
-        return self.char_embeddings[start:end], self.char_embeddings[start + 1:end + 1]
+        end = start + self.seq_len
+        return self.encoded[start:end], self.one_hot[self.encoded[start + 1:end + 1]]
