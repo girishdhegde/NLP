@@ -55,7 +55,7 @@ class WordTokenizer:
         sp_chars = set(sp_chars)
         for sp in sp_chars:
             corpus = corpus.replace(sp, f' {sp} ')
-        words = corpus.split()
+        words = corpus.split(' ')
         tokens = list(set(words))
         return corpus, words, tokens
 
@@ -79,6 +79,30 @@ class WordTokenizer:
         words = [token for token in words if token2freq[token] >= frequency]
         tokens = [token for token in tokens if token2freq[token] >= frequency]
         token2freq = {token:token2freq[token] for token in tokens}
+        return words, tokens, token2freq
+
+    @classmethod
+    def remove_tokens(cls, words, tokens, token2freq=None, filter_tokens=()):
+        """ Function to remove tokens with occarances less than given frequency.
+            author: girish d. hegde
+
+        Args:
+            words (list[str]): list of tokens/words of corpus.
+            tokens (list[str]): unique tokens.
+            token2freq (dict[str:int]): dictionary/lookup of token occarances count.
+            filter_tokens (tuple[str]): tuple of tokens to be removed.
+
+        Returns:
+            list[str]: words - list of filtered tokens/words.
+            list[str]: tokens - remaining tokens after filtering.
+            dict[str:int]: token2freq - dictionary/lookup of remaining token frequencies.
+        """
+        if len(filter_tokens):
+            filter_tokens = set(filter_tokens)
+            words = [token for token in words if token not in filter_tokens]
+            tokens = [token for token in tokens if token not in filter_tokens]
+            if token2freq is not None:
+                token2freq = {token:token2freq[token] for token in tokens if token not in filter_tokens}
         return words, tokens, token2freq
 
     @classmethod
@@ -128,7 +152,7 @@ class WordTokenizer:
         return int2token
 
     @classmethod
-    def run(cls, filename, lowercase=True, min_frequency=1, out_json=None, encoding='utf-8', verbose=False):
+    def run(cls, filename, lowercase=True, min_frequency=1, exclude=(), out_json=None, encoding='utf-8', verbose=False):
         """ Function run tokenization pipeline on text corpus file.
                 1. read file into string corpus.
                 2. convert corpus into tokens.
@@ -141,6 +165,7 @@ class WordTokenizer:
             filename (Path): path to .txt file containg corpus of text data.
             lowercase (bool): convert all tokens to lowercase.
             min_frequency (int): minimum token/word occarance threshold.
+            exclude (tuple[str]): tokens to be removed/exluded.
             out_json (Path): path to .json file for writing int2token lookup.
             encodeing (str): input file encoding.
             verbose (bool): print info.
@@ -160,6 +185,9 @@ class WordTokenizer:
         words, tokens, token2freq = cls.filter_sparse(words, tokens, min_frequency)
         if verbose: print('Total unique tokens after filtering by count = ', len(tokens))
         if verbose: print('Total words/tokens in corpus after filtering by count = ', len(words))
+        words, tokens, token2freq = cls.remove_tokens(words, tokens, token2freq, exclude)
+        if verbose: print('Total unique tokens after exclude = ', len(tokens))
+        if verbose: print('Total words/tokens in corpus after exclude = ', len(words))
         int2token, token2int = cls.get_lookups(tokens)
         if out_json is not None: cls.write_json(out_json, int2token)
         return words, tokens, token2freq, int2token, token2int
