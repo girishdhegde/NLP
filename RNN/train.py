@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from rnn import CharRNN
-from data import Word2ClassSet, Word2WordSet, word2word_collate_fn, word2class_collate_fn
+from data import Chars2ClassSet, Chars2CharsSet, chars2chars_collate_fn, chars2class_collate_fn
 from utils import save_checkpoint, load_checkpoint
 
 
@@ -32,21 +32,21 @@ DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 LOGDIR.mkdir(parents=True, exist_ok=True)
 
 
-# textset = Word2ClassSet('../data/names', DEVICE)
-textset = Word2WordSet(DATAPATH, DEVICE)
+# textset = Chars2ClassSet('../data/names', DEVICE)
+textset = Chars2CharsSet(DATAPATH, DEVICE)
 iterations = (len(textset)//BATCH_SIZE) + 1
 print('Total training samples = ', len(textset))
 print(f'Vocab size = {textset.vocab_size}')
 
 net = CharRNN(textset.vocab_size, HIDDEN_SIZE, NUM_LAYERS, dropout=0)
 net, best, int2char, start_epoch = load_checkpoint(LOAD, net, DEVICE)
-textset = Word2WordSet(DATAPATH, DEVICE, int2char) if int2char is not None else textset
+textset = Chars2CharsSet(DATAPATH, DEVICE, int2char) if int2char is not None else textset
 net.to(DEVICE)
 params = sum(p.numel() for p in net.parameters())
 print(f'Total model parameters = {params} = {params/1e6}M')
 # print(net)
 
-trainloader = DataLoader(textset, batch_size=BATCH_SIZE, collate_fn=word2word_collate_fn, shuffle=True)
+trainloader = DataLoader(textset, batch_size=BATCH_SIZE, collate_fn=chars2chars_collate_fn, shuffle=True)
 optimizer = optim.Adam(net.parameters(), lr=LR)
 criterion = nn.CrossEntropyLoss()
 

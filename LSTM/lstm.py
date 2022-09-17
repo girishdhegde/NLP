@@ -136,7 +136,7 @@ class WordLSTM(nn.Module):
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.lstm = LSTM(input_size, hidden_size, num_layers)
-        # self.lstm = nn.lstm(input_size, hidden_size, num_layers)
+        # self.lstm = nn.LSTM(input_size, hidden_size, num_layers)
         self.dropout = nn.Dropout(p=dropout)
         self.fc = nn.Linear(hidden_size, input_size)
 

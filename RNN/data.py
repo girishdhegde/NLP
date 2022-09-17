@@ -9,14 +9,22 @@ from torch.utils.data import Dataset
 __author__ = "__Girish_Hegde__"
 
 
-class Word2WordSet(Dataset):
-    """ Pytorch Dataset class for set of word text documents.
+class Chars2CharsSet(Dataset):
+    """ Pytorch character level Dataset class for set of word text documents.
         author: girish d. hegde
 
     Args:
         filename (str): .txt filepath.
         device (torch.device/str):  torch data device 'cuda' or 'cpu'.
         int2char (dict[int:str]): precalculated int2char lookup.
+
+    Note:
+        text file should contain words seperated by newline.
+        filename.txt
+            word1
+            word2
+            ...
+            wordn
     """
     def __init__(self, filename, device='cuda', int2char=None):
         super().__init__()
@@ -56,7 +64,7 @@ class Word2WordSet(Dataset):
         return self.word_embeddings[index][:-1], self.word_embeddings[index][1:], self.chars_per_word[index]
 
 
-class Word2ClassSet(Dataset):
+class Chars2ClassSet(Dataset):
     """ Pytorch Dataset class for word classification.
         author: girish d. hegde
 
@@ -69,6 +77,9 @@ class Word2ClassSet(Dataset):
         Data directory structure:
             dirname/
                 class_0.txt -> label = 0.
+                    word0
+                    ...
+                    wordn
                 class_1.txt -> label = 1.
                 ...
                 class_n.txt -> label = n.
@@ -122,7 +133,7 @@ class Word2ClassSet(Dataset):
         return self.word_embeddings[index], self.classes[index], self.chars_per_word[index]
 
 
-def word2word_collate_fn(batch):
+def chars2chars_collate_fn(batch):
     """ Pytorch collate_fn to get pad all individual data in a batch to get same size.
         author: girish d. hegde
 
@@ -146,7 +157,7 @@ def word2word_collate_fn(batch):
     return inputs_, labels_, nchars
 
 
-def word2class_collate_fn(batch):
+def chars2class_collate_fn(batch):
     """ Pytorch collate_fn to get pad all individual data in a batch to get same size.
         author: girish d. hegde
 

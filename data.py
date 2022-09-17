@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 __author__ = "__Girish_Hegde__"
 
 
-class Word2WordSet(Dataset):
+class Chars2CharsSet(Dataset):
     """ Pytorch Dataset class for set of word text documents.
         author: girish d. hegde
 
@@ -56,13 +56,14 @@ class Word2WordSet(Dataset):
         return self.word_embeddings[index][:-1], self.word_embeddings[index][1:], self.chars_per_word[index]
 
 
-class Word2ClassSet(Dataset):
+class Chars2ClassSet(Dataset):
     """ Pytorch Dataset class for word classification.
         author: girish d. hegde
 
     Args:
         dirname (str): path to Directory containing data.
         device (torch.device/str):  torch data device 'cuda' or 'cpu'.
+        int2char (dict[int:str]): precalculated int2char lookup.
 
     Note:
         Data directory structure:
@@ -72,9 +73,8 @@ class Word2ClassSet(Dataset):
                 ...
                 class_n.txt -> label = n.
     """
-    def __init__(self, dirname, device='cuda'):
+    def __init__(self, dirname, device='cuda', int2char=None):
         super().__init__()
-
         directory = Path(dirname)
         textfiles = list(directory.glob('**/*.txt'))
         self.classnames = [fp.stem for fp in textfiles]
@@ -97,8 +97,8 @@ class Word2ClassSet(Dataset):
         allchars = ''.join(text)
         chars = list(set(allchars))
         self.vocab_size = len(chars)
-        self.int2char = dict(enumerate(chars))
-        self.char2int = {ch: ii for ii, ch in self.int2char.items()}
+        self.int2char = dict(enumerate(chars)) if int2char is None else int2char
+        self.char2int = {ch: i for i, ch in self.int2char.items()}
         # generate one-hot char and word embeddings
         self.encoded = [[self.char2int[ch] for ch in word] for word in text]
         self.embeddings = torch.eye(self.vocab_size).float().to(device)
@@ -123,7 +123,7 @@ class Word2ClassSet(Dataset):
 
 
 class TextSet(Dataset):
-    """ Pytorch Dataset class for text documents.
+    """ Pytorch Dataset class for text corpus.
         author: girish d. hegde
 
     Args:
@@ -164,31 +164,7 @@ class TextSet(Dataset):
         return self.char_embeddings[start:end], self.char_embeddings[start + 1:end + 1]
 
 
-def same_timesteps_collate_fn(batch):
-    """ Pytorch collate_fn to get pad all individual data in a batch to get same size.
-        author: girish d. hegde
-
-    Args:
-        batch (tuple[torch.tensor]): [N, ...] - list of batch data with different timesteps.
-
-    Returns:
-        torch.tensor: [N, max(nchars), ...] - batch input data.
-        # torch.tensor: [N, max(nchars), ...] - batch label data.
-        torch.tensor: [N, ] - batch label data.
-    """
-    bs, vocab_size = len(batch), batch[0][0].shape[-1]
-    device, dtype = batch[0][0].device, batch[0][0].dtype
-    nchars = [d[2] for d in batch]
-    max_len = max(nchars)
-    inputs_ = torch.zeros((bs, max_len, vocab_size), device=device, dtype=dtype)
-    labels_ = torch.zeros((bs,), device=device, dtype=batch[0][1].dtype)
-    for i, n in enumerate(nchars):
-        inputs_[i, :n] = batch[i][0]
-        labels_[i] = batch[i][1]
-    return inputs_, labels_, nchars
-
-
-def word2word_collate_fn(batch):
+def chars2chars_collate_fn(batch):
     """ Pytorch collate_fn to get pad all individual data in a batch to get same size.
         author: girish d. hegde
 
@@ -212,7 +188,7 @@ def word2word_collate_fn(batch):
     return inputs_, labels_, nchars
 
 
-def word2class_collate_fn(batch):
+def chars2class_collate_fn(batch):
     """ Pytorch collate_fn to get pad all individual data in a batch to get same size.
         author: girish d. hegde
 
