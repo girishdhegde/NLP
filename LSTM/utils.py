@@ -48,7 +48,7 @@ def load_checkpoint(filename, net, device='cpu'):
 
 
 @torch.no_grad()
-def pred2text(logits, int2token, ):
+def logits2text(logits, int2token, ):
     """ Function to convert model prediction logits into words.
         author: girish d. hegde
 
@@ -65,7 +65,7 @@ def pred2text(logits, int2token, ):
 
 
 def write_pred(logits, int2token, filename, label=''):
-    text = pred2text(logits, int2token)
+    text = logits2text(logits, int2token)
     data = '-'*100 + '\n' + label + '\n' + text + '-'*100 + '\n'
     with open(filename,'a' if Path(filename).is_file() else 'w') as fp:
         fp.write(data)
