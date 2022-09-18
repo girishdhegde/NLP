@@ -66,9 +66,9 @@ def logits2text(logits, int2token, ):
 
 def write_pred(logits, int2token, filename, label=''):
     text = logits2text(logits, int2token)
-    data = '-'*100 + '\n' + label + '\n' + text + '-'*100 + '\n'
+    data = f'\n{"-"*100}\n{label}\n{"-"*100}\n{text}\n{"-"*100}'
     with open(filename,'a' if Path(filename).is_file() else 'w') as fp:
-        fp.write(data)
+         fp.write(data)
     return text
 
 
