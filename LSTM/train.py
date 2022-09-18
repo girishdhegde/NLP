@@ -32,6 +32,7 @@ LOAD = Path('./data/runs/best.pt')  # or None
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 LOGDIR.mkdir(parents=True, exist_ok=True)
 
+
 words, tokens, token2freq, int2token, token2int = WordTokenizer.run(
     DATAPATH, lowercase=True, min_frequency=10,
     exclude=(), out_json='./data/runs/tokens.json',
@@ -61,9 +62,9 @@ for epoch in range(start_epoch, EPOCHS):
     for iteration, (inp, target) in enumerate(trainloader):
         inp, target = inp.permute(1, 0), target.permute(1, 0)  # (bs, seqlen) -> (seqlen, bs)
         timesteps, bs = inp.shape
-        # h_t, c_t = net.init_hidden(bs, DEVICE)
-        h_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
-        c_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
+        h_t, c_t = net.init_hidden(bs, DEVICE)
+        # h_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
+        # c_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
 
         optimizer.zero_grad()
         pred, states = net(inp, (h_t, c_t))
