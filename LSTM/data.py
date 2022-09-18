@@ -56,6 +56,7 @@ class WordTokenizer:
         for sp in sp_chars:
             corpus = corpus.replace(sp, f' {sp} ')
         words = corpus.split(' ')
+        words = [w for w in words if w != '']
         tokens = list(set(words))
         return corpus, words, tokens
 
@@ -208,8 +209,8 @@ class TextSet(Dataset):
         token2int = {tk:i for i, tk in int2token.items()}
         self.vocab_size = len(int2token)
         self.seq_len = seq_len
-        self.encoded = torch.tensor([token2int[token] for token in words], dtype=torch.int32, device=device)
-        self.one_hot = torch.eye((self.vocab_size, self.vocab_size), dtype=torch.float32, device=device)
+        self.encoded = torch.tensor([token2int[token] for token in words], dtype=torch.int64, device=device)
+        # self.one_hot = torch.eye(self.vocab_size, dtype=torch.float32, device=device)
         self.len = len(words) - (seq_len + 1)
 
     def __len__(self):
@@ -219,8 +220,9 @@ class TextSet(Dataset):
         """
         Returns:
             torch.tensor: [seq_len, ] - input tokens encoding.
-            torch.tensor: [seq_len, vocab_size] - ouput token onehot embedding.
+            torch.tensor: [seq_len, ] - ouput tokens encoding.
         """
         start = random.randint(0, self.len)
         end = start + self.seq_len
-        return self.encoded[start:end], self.one_hot[self.encoded[start + 1:end + 1]]
+        # return self.encoded[start:end], self.one_hot[self.encoded[start + 1:end + 1]]
+        return self.encoded[start:end], self.encoded[start + 1:end + 1]

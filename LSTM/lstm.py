@@ -131,16 +131,20 @@ class LSTM(nn.Module):
 
 
 class WordLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=2, dropout=0.0):
+    def __init__(self, vocab_size, embedding_dim=32, hidden_size=256, num_layers=2, dropout=0.0):
         super().__init__()
-        self.num_layers = num_layers
+        self.vocab_size = vocab_size
         self.hidden_size = hidden_size
-        self.lstm = LSTM(input_size, hidden_size, num_layers)
-        # self.lstm = nn.LSTM(input_size, hidden_size, num_layers)
+        self.embedding_dim = embedding_dim
+        self.num_layers = num_layers
+        self.emb = nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = LSTM(embedding_dim, hidden_size, num_layers)
+        # self.lstm = nn.LSTM(embedding_dim, hidden_size, num_layers)
         self.dropout = nn.Dropout(p=dropout)
-        self.fc = nn.Linear(hidden_size, input_size)
+        self.fc = nn.Linear(hidden_size, vocab_size)
 
     def forward(self, x, hidden=None):
+        x = self.emb(x)
         output, (h_t, c_t) = self.lstm(x, hidden)
         output = self.dropout(output)
         output = self.fc(output)
@@ -157,8 +161,7 @@ if __name__ == '__main__':
     input_size = 8
     hidden_size = 16
 
-    # net = LSTM(input_size, hidden_size, num_layers)
-    net = WordLSTM(input_size, hidden_size, num_layers)
+    net = LSTM(input_size, hidden_size, num_layers)
     params = sum(p.numel() for p in net.parameters())
     # print(net)
     print(f'total parameters = {params} = {params/1e6}M')
