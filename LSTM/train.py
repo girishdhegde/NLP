@@ -19,7 +19,7 @@ SEQ_LEN = 25
 
 LR = 1e-3
 BATCH_SIZE = 32
-EPOCHS = 100
+EPOCHS = 200
 GRADIENT_CLIP = None  # 5
 
 LOGDIR = Path('./data/runs')
@@ -61,9 +61,9 @@ for epoch in range(start_epoch, EPOCHS):
     for iteration, (inp, target) in enumerate(trainloader):
         inp, target = inp.permute(1, 0), target.permute(1, 0)  # (bs, seqlen) -> (seqlen, bs)
         timesteps, bs = inp.shape
-        h_t, c_t = net.init_hidden(bs, DEVICE)
-        # h_t = torch.zeros(NUM_LAYERS, BATCH_SIZE, HIDDEN_SIZE, device=DEVICE)
-        # c_t = torch.zeros(NUM_LAYERS, BATCH_SIZE, HIDDEN_SIZE, device=DEVICE)
+        # h_t, c_t = net.init_hidden(bs, DEVICE)
+        h_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
+        c_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
 
         optimizer.zero_grad()
         pred, states = net(inp, (h_t, c_t))
@@ -79,21 +79,22 @@ for epoch in range(start_epoch, EPOCHS):
             log_data = f"epoch: {epoch}/{EPOCHS},\titeration: {iteration}/{iterations},\tloss: {loss.item()},\t best_loss: {best}"
             print(log_data)
 
-#     trainloss = trainloss/iteration
-#     if trainloss < best:
-#         best = trainloss
-#         save_checkpoint(
-#             HIDDEN_SIZE, NUM_LAYERS, textset.vocab_size, textset.int2token,
-#             net.state_dict(), epoch, trainloss, best, LOGDIR/f'best.pt'
-#         )
+    trainloss = trainloss/iteration
+    if trainloss < best:
+        best = trainloss
+        save_checkpoint(
+            net.vocab_size, EMBEDDING_DIM, HIDDEN_SIZE, NUM_LAYERS, int2token,
+            net.state_dict(), epoch, trainloss, best, LOGDIR/f'best.pt'
+        )
 
-#     if epoch%SAVE_FREQ == 0:
-#         save_checkpoint(
-#             HIDDEN_SIZE, NUM_LAYERS, textset.vocab_size, textset.int2token,
-#             net.state_dict(), epoch, trainloss, best, LOGDIR/f'checkpoint.pt'
-#         )
-#         logfile = LOGDIR/'log.txt'
-#         log_data = f"epoch: {epoch}/{EPOCHS}, \tloss: {trainloss},\t best_loss: {best}"
-#         print(f'{"-"*100}\n{log_data}\n{"-"*100}')
-#         with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
-#             fp.write(log_data + '\n')
+    if epoch%SAVE_FREQ == 0:
+        save_checkpoint(
+            net.vocab_size, EMBEDDING_DIM, HIDDEN_SIZE, NUM_LAYERS, int2token,
+            net.state_dict(), epoch, trainloss, best, LOGDIR/f'checkpoint.pt'
+        )
+        write_pred(pred[:, 0, :], int2token, LOGDIR/'predictions.txt', label=f'epoch = {epoch}')
+        logfile = LOGDIR/'log.txt'
+        log_data = f"epoch: {epoch}/{EPOCHS}, \tloss: {trainloss},\t best_loss: {best}"
+        print(f'{"-"*100}\n{log_data}\n{"-"*100}')
+        with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
+            fp.write(log_data + '\n')
