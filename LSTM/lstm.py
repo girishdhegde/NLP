@@ -138,8 +138,8 @@ class WordLSTM(nn.Module):
         self.embedding_dim = embedding_dim
         self.num_layers = num_layers
         self.emb = nn.Embedding(vocab_size, embedding_dim)
-        # self.lstm = LSTM(embedding_dim, hidden_size, num_layers)
-        self.lstm = nn.LSTM(embedding_dim, hidden_size, num_layers)
+        self.lstm = LSTM(embedding_dim, hidden_size, num_layers)
+        # self.lstm = nn.LSTM(embedding_dim, hidden_size, num_layers)
         self.dropout = nn.Dropout(p=dropout)
         self.fc = nn.Linear(hidden_size, vocab_size)
 

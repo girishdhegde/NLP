@@ -20,7 +20,7 @@ SEQ_LEN = 25
 LR = 1e-3
 BATCH_SIZE = 32
 EPOCHS = 100
-GRADIENT_CLIP = 5
+GRADIENT_CLIP = None  # 5
 
 LOGDIR = Path('./data/runs')
 PRINT_FREQ = 100  # print info. frequency wrt iterations.
@@ -55,29 +55,29 @@ optimizer = optim.Adam(net.parameters(), lr=LR)
 criterion = nn.CrossEntropyLoss()
 
 
-# net.train()
-# for epoch in range(start_epoch, EPOCHS):
-#     trainloss = 0
-#     for iteration, (inp, target, nchars) in enumerate(trainloader):
-#         inp, target = inp.permute(1, 0, 2), target.permute(1, 0, 2)
-#         timesteps, bs, inpsize = inp.shape
-#         # hdn = net.rnn.init_hidden(bs, DEVICE)
-#         hdn = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
+net.train()
+for epoch in range(start_epoch, EPOCHS):
+    trainloss = 0
+    for iteration, (inp, target) in enumerate(trainloader):
+        inp, target = inp.permute(1, 0), target.permute(1, 0)  # (bs, seqlen) -> (seqlen, bs)
+        timesteps, bs = inp.shape
+        h_t, c_t = net.init_hidden(bs, DEVICE)
+        # h_t = torch.zeros(NUM_LAYERS, BATCH_SIZE, HIDDEN_SIZE, device=DEVICE)
+        # c_t = torch.zeros(NUM_LAYERS, BATCH_SIZE, HIDDEN_SIZE, device=DEVICE)
 
-#         optimizer.zero_grad()
-#         pred, hdn = net(inp, hdn)
-#         # pred = pred.permute(1, 0, 2)
+        optimizer.zero_grad()
+        pred, states = net(inp, (h_t, c_t))
 
-#         loss = criterion(pred.reshape(-1, inpsize), target.reshape(-1, inpsize))
-#         loss.backward()
-#         if GRADIENT_CLIP is not None:
-#             nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
-#         optimizer.step()
+        loss = criterion(pred.reshape(-1, textset.vocab_size), target.reshape(-1))
+        loss.backward()
+        if GRADIENT_CLIP is not None:
+            nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
+        optimizer.step()
 
-#         trainloss += loss.item()
-#         if iteration%PRINT_FREQ == 0:
-#             log_data = f"epoch: {epoch}/{EPOCHS},\titeration: {iteration}/{iterations},\tloss: {loss.item()},\t best_loss: {best}"
-#             print(log_data)
+        trainloss += loss.item()
+        if iteration%PRINT_FREQ == 0:
+            log_data = f"epoch: {epoch}/{EPOCHS},\titeration: {iteration}/{iterations},\tloss: {loss.item()},\t best_loss: {best}"
+            print(log_data)
 
 #     trainloss = trainloss/iteration
 #     if trainloss < best:
