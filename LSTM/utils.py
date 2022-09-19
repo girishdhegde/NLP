@@ -144,3 +144,4 @@ def sample(net, int2token, top_k=1, prime='The', max_size=100, device='cpu'):
         output.append(tk)
 
     return ' '.join(output)
+
