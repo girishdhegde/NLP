@@ -35,7 +35,7 @@ LOGDIR.mkdir(parents=True, exist_ok=True)
 
 words, tokens, token2freq, int2token, token2int = WordTokenizer.run(
     DATAPATH, lowercase=True, min_frequency=10,
-    exclude=(), out_json='./data/runs/tokens.json',
+    exclude=(), out_json=LOGDIR/'tokens.json',
     encoding='utf-8', verbose=True
 )
 
