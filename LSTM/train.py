@@ -43,6 +43,7 @@ net = WordLSTM(len(int2token), EMBEDDING_DIM, HIDDEN_SIZE, NUM_LAYERS, dropout=0
 net, best, int2token_, start_epoch = load_checkpoint(LOAD, net, DEVICE)
 int2token = int2token if int2token_ is None else int2token_
 textset = TextSet(words, int2token, SEQ_LEN, DEVICE)
+WordTokenizer.write_json(LOGDIR/'tokens.json', int2token)
 net.to(DEVICE)
 params = sum(p.numel() for p in net.parameters())
 
