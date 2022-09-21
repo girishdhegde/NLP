@@ -7,6 +7,7 @@ Refs:
 
 import torch
 import torch.nn as nn
+from einops import rearrange, repeat
 
 
 __author__ = "__Girish_Hegde__"
@@ -131,7 +132,8 @@ class LSTM(nn.Module):
 
 
 class BiLSTM(nn.Module):
-    """ BiLSTM - Bi directional LSTM
+    """ BiLSTM - Bi directional LSTM -> LSTM1(sequence) + LSTM2(reversed(sequence))
+        Uses: Summarization, Translation, etc where whole input sequence is available.
         author: girish d. hegde
 
     Refs:
@@ -144,6 +146,41 @@ class BiLSTM(nn.Module):
     """
     def __init__(self, input_size, hidden_size, num_layers=1, ):
         super().__init__()
+        self.f_lstm = nn.LSTM(input_size, hidden_size, num_layers)
+        self.b_lstm = nn.LSTM(input_size, hidden_size, num_layers)
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+    def forward(self, x, init_states=None):
+        """
+        Args:
+            x (torch.tensor): [seq_len, batchsize, input_size] - input data.
+            init_states (tuple[torch.tensor]):
+                list[torch.tensor]: [num_layers*2, batchsize, hidden_size] - hidden states.
+                list[torch.tensor]: [num_layers*2, batchsize, hidden_size] - cell states.
+
+        Returns:
+            tuple(torch.tensor):
+                torch.tensor: [seq_len, batchsize, hidden_size*2] - outputs.
+                tuple(torch.tenosr): updated lstm states.
+                    torch.tenosr: [num_layers*2, batchsize, hidden_size] - updated hidden states.
+                    torch.tenosr: [num_layers*2, batchsize, hidden_size] - updated cell states.
+        """
+        seq_len, bs, l = x.shape
+        hidden_states, cell_states = self.init_hidden(bs, x.device) if init_states is None else init_states
+        f_h, b_h = torch.split(hidden_states, self.num_layers, 0)
+        f_c, b_c = torch.split(cell_states, self.num_layers, 0)
+        f_out, (f_hn, f_cn) = self.f_lstm(x, (f_h, f_c))
+        b_out, (b_hn, b_cn)= self.b_lstm(torch.flip(x, dims=(0, )), (b_h, b_c))
+        out = rearrange([f_out, b_out], 'x s b h -> s b (x h)')
+        h_out = rearrange([f_hn, b_hn], 'x l b h -> (x l) b h')
+        c_out = rearrange([f_cn, b_cn], 'x l b h -> (x l) b h')
+        return out, (h_out, c_out)
+
+    def init_hidden(self, batch_size, device='cpu'):
+        h_t = torch.zeros((2*self.num_layers, batch_size, self.hidden_size), dtype=torch.float32, device=device)
+        c_t = torch.zeros((2*self.num_layers, batch_size, self.hidden_size), dtype=torch.float32, device=device)
+        return (h_t, c_t)
 
 
 class WordLSTM(nn.Module):
@@ -178,6 +215,7 @@ if __name__ == '__main__':
     hidden_size = 16
 
     net = LSTM(input_size, hidden_size, num_layers)
+    # net = BiLSTM(input_size, hidden_size, num_layers)
     params = sum(p.numel() for p in net.parameters())
     # print(net)
     print(f'total parameters = {params} = {params/1e6}M')
