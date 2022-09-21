@@ -130,6 +130,22 @@ class LSTM(nn.Module):
         return (h_t, c_t)
 
 
+class BiLSTM(nn.Module):
+    """ BiLSTM - Bi directional LSTM
+        author: girish d. hegde
+
+    Refs:
+        https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html
+
+    Args:
+        input_size (int): input size.
+        hidden_size (int): hidden size.
+        num_layers (int): number of lstm layers.
+    """
+    def __init__(self, input_size, hidden_size, num_layers=1, ):
+        super().__init__()
+
+
 class WordLSTM(nn.Module):
     def __init__(self, vocab_size, embedding_dim=32, hidden_size=256, num_layers=2, dropout=0.0):
         super().__init__()
