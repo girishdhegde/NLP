@@ -1,5 +1,6 @@
 """
 Refs:
+    https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.676.4320&rep=rep1&type=pdf
     https://colah.github.io/posts/2015-08-Understanding-LSTMs/
     https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html
 """
