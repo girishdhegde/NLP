@@ -126,3 +126,19 @@ class MHA(nn.Module):
 
         return self.act(out), rearrange(attn, '(b h) i j -> b h i j', h=self.heads)
 
+
+class SubLayer:
+    """ SubLayer
+        out = LayerNorm(x + module(x))
+        author: girish d. hegde
+
+    Args:
+        module (nn.Module): MHA or FeedForward initialized object.
+        dims (int/tuple[int]): Layer Normalization feature dimension.
+    """
+    def __init__(self, module, dims):
+        self.module = module
+        self.layernorm = nn.LayerNorm(dims)
+
+    def forward(self, x):
+        return self.layernorm(x + self.module(x))
