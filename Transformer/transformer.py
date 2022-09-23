@@ -127,7 +127,7 @@ class MHA(nn.Module):
         return self.act(out), rearrange(attn, '(b h) i j -> b h i j', h=self.heads)
 
 
-class SubLayer:
+class SubLayer(nn.Module):
     """ SubLayer
         out = LayerNorm(x + module(x))
         author: girish d. hegde
@@ -142,3 +142,24 @@ class SubLayer:
 
     def forward(self, x):
         return self.layernorm(x + self.module(x))
+
+
+class FeedForward(nn.Module):
+    """ FeedForward
+        author: girish d. hegde
+
+    Args:
+        d_model (int): dimension.
+        act (nn.Module): activation function.
+    """
+    def __init__(self, d_model, act=nn.ReLU):
+        super().__init__()
+        self.d_model = d_model
+        self.ff = nn.Sequential([
+            nn.Linear(d_model, 4*d_model),
+            act(),
+            nn.Linear(4*d_model, d_model)
+        ])
+
+    def forward(self, x):
+        return self.ff(x)
