@@ -114,7 +114,7 @@ class MHA(nn.Module):
             q (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
             k (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
             v (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
-            mask (torch.tensor[bool]): [seq_len, seq_len] - boolean mask.
+            mask (torch.tensor[bool]): [seq_len, seq_len] - boolean mask. attn[where mask is True] = -inf.
 
         Returns:
             torch.tensor: [bs, seq_len, emb_dim] - output values.
@@ -128,7 +128,7 @@ class MHA(nn.Module):
 
         attn = torch.bmm(Q, K.permute(0, 2, 1))/(self.d ** 0.5)  # [bs*heads, seq_len, seq_len]
         if mask is not None:
-            attn[:, mask] = -float('inf')
+            attn[..., mask] = -float('inf')
         attn = F.softmax(attn, dim=-1)
         attn = self.dropout(attn) if self.dropout is not None else attn
 
@@ -152,8 +152,8 @@ class SubLayer(nn.Module):
         self.module = module
         self.layernorm = nn.LayerNorm(dims)
 
-    def forward(self, x):
-        y, *_ = self.module(x)
+    def forward(self, x, *args, **kwargs):
+        y, *_ = self.module(x, *args, **kwargs)
         return self.layernorm(x + y)
 
 
@@ -197,8 +197,31 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self):
+    def __init__(self, emb_dim, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
         super().__init__()
+        self.emb_dim = emb_dim
+        self.heads = heads
+        self.num_layers = num_layers
+        self.self_attn_layers = nn.ModuleList()
+        self.cross_attn_layers = nn.ModuleList()
+        self.ffn_layers = nn.ModuleList()
+        for _ in range(num_layers):
+            self.self_layers.append(
+                SubLayer(MHA(emb_dim, heads, bias=False, act=attn_act, dropout=dropout), emb_dim)
+            )
+            self.cross_layers.append(
+                SubLayer(MHA(emb_dim, heads, bias=False, act=attn_act, dropout=dropout), emb_dim)
+            )
+            self.ffn_layers.append(SubLayer(FFN(emb_dim, act=ffn_act), emb_dim))
+
+    def forward(self, x, context):
+        bs, seq_len, dim = x.shape
+        self.mask = torch.tril(torch.ones(seq_len, seq_len)) == 0
+        for i in range(self.num_layers):
+            x = self.self_attn_layers[i](x, mask=self.mask)
+            x = self.cross_attn_layers[i](x, context, context)
+            x = self.ffn_layers[i](x)
+        return x
 
 
 class Transformer(nn.Module):
