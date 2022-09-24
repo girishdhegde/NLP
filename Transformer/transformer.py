@@ -242,10 +242,10 @@ class Decoder(nn.Module):  # causal cross attn decoder
         self.cross_attn_layers = nn.ModuleList()
         self.ffn_layers = nn.ModuleList()
         for _ in range(num_layers):
-            self.self_layers.append(
+            self.self_attn_layers.append(
                 SubLayer(MHA(emb_dim, heads, bias=False, pre_act=pre_attn_act, post_act=post_attn_act, dropout=dropout), emb_dim)
             )
-            self.cross_layers.append(
+            self.cross_attn_layers.append(
                 SubLayer(MHA(emb_dim, heads, bias=False, pre_act=pre_attn_act, post_act=post_attn_act, dropout=dropout), emb_dim)
             )
             self.ffn_layers.append(SubLayer(FFN(emb_dim, act=ffn_act), emb_dim))
