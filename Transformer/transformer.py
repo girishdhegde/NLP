@@ -118,10 +118,11 @@ class MHA(nn.Module):
         emb_dim (int): dimension.
         heads (int): number of heads. (dq = dk = dv = d = emb_dim/h).
         bias (bool): adde bias to input and output projection layers.
-        act (nn.Module): output projection activation function.
+        pre_act (nn.Module): pre attention projection activation function.( applied on Q, K, V).
+        post_act (nn.Module): output projection activation function. (applied after attn).
         dropout (float): dropout probability.
     """
-    def __init__(self, emb_dim, heads=1, bias=False, act=nn.Identity, dropout=None):
+    def __init__(self, emb_dim, heads=1, bias=False, pre_act=None, post_act=None, dropout=None):
         super().__init__()
         self.emb_dim = emb_dim
         self.heads = heads
@@ -133,7 +134,8 @@ class MHA(nn.Module):
 
         self.proj = nn.Linear(emb_dim, emb_dim, bias=bias)
 
-        self.act = act()
+        self.pre_act = pre_act() if pre_act is not None else None
+        self.post_act = post_act() if post_act is not None else None
         self.dropout = nn.Dropout(dropout) if dropout is not None else None
 
     def forward(self, q, k=None, v=None, mask=None):
@@ -154,7 +156,8 @@ class MHA(nn.Module):
         v = q if v is None else v
 
         Q, K, V = self.to_q(q), self.to_k(k), self.to_v(v)  # [bs, seq_len, emb_dim]
-        Q, K, v = (rearrange(T, 'b l (h d) -> (b h) l d', h=self.heads) for T in (Q, K, V))
+        Q, K, V = (self.pre_act(T) for T in (Q, K, V)) if self.pre_act is not None else (Q, K, V)
+        Q, K, V = (rearrange(T, 'b l (h d) -> (b h) l d', h=self.heads) for T in (Q, K, V))
 
         attn = torch.bmm(Q, K.permute(0, 2, 1))/(self.d ** 0.5)  # [bs*heads, seq_len, seq_len]
         if mask is not None:
@@ -165,8 +168,9 @@ class MHA(nn.Module):
         out = torch.bmm(attn, V)  # [bs*heads, seq_len, d]
         out = rearrange(out, '(b h) l d -> b l (h d)', h=self.heads)  # [bs, seq_len, emb_dim]
         out = self.proj(out)
+        out = self.post_act(out) if self.post_act is not None else out
 
-        return self.act(out), rearrange(attn, '(b h) i j -> b h i j', h=self.heads)
+        return out, rearrange(attn, '(b h) i j -> b h i j', h=self.heads)
 
 
 class SubLayer(nn.Module):
@@ -211,7 +215,7 @@ class FFN(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, emb_dim, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
+    def __init__(self, emb_dim, heads, num_layers=2, pre_attn_act=None, post_attn_act=None, ffn_act=nn.ReLU, dropout=0.0):
         super().__init__()
         self.emb_dim = emb_dim
         self.heads = heads
@@ -219,7 +223,7 @@ class Encoder(nn.Module):
         self.layers = []
         for _ in range(num_layers):
             self.layers.append(
-                SubLayer(MHA(emb_dim, heads, bias=False, act=attn_act, dropout=dropout), emb_dim)
+                SubLayer(MHA(emb_dim, heads, bias=False, pre_act=pre_attn_act, post_act=post_attn_act, dropout=dropout), emb_dim)
             )
             self.layers.append(SubLayer(FFN(emb_dim, act=ffn_act), emb_dim))
         self.layers = nn.Sequential(*self.layers)
@@ -229,7 +233,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):  # causal cross attn decoder
-    def __init__(self, emb_dim, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
+    def __init__(self, emb_dim, heads, num_layers=2, pre_attn_act=None, post_attn_act=None, ffn_act=nn.ReLU, dropout=0.0):
         super().__init__()
         self.emb_dim = emb_dim
         self.heads = heads
@@ -239,10 +243,10 @@ class Decoder(nn.Module):  # causal cross attn decoder
         self.ffn_layers = nn.ModuleList()
         for _ in range(num_layers):
             self.self_layers.append(
-                SubLayer(MHA(emb_dim, heads, bias=False, act=attn_act, dropout=dropout), emb_dim)
+                SubLayer(MHA(emb_dim, heads, bias=False, pre_act=pre_attn_act, post_act=post_attn_act, dropout=dropout), emb_dim)
             )
             self.cross_layers.append(
-                SubLayer(MHA(emb_dim, heads, bias=False, act=attn_act, dropout=dropout), emb_dim)
+                SubLayer(MHA(emb_dim, heads, bias=False, pre_act=pre_attn_act, post_act=post_attn_act, dropout=dropout), emb_dim)
             )
             self.ffn_layers.append(SubLayer(FFN(emb_dim, act=ffn_act), emb_dim))
 
