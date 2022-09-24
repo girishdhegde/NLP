@@ -27,10 +27,16 @@ class Embedding(nn.Module):
 
 
 class PositionEmbedding(nn.Module):
+    """ Fixed Positional Embedding
+        author: girish d. hegde
+
+    Note:
+        emb_dim must even.
+    """
     def __init__(self, emb_dim, k=10_000):
         super().__init__()
-        self.emb_dim = emb_dim
-        self.k = k
+        inv_freq = 1/(k**(torch.arange(0, emb_dim, 2)/emb_dim))[None, :]
+        self.register_buffer('inv_freq', inv_freq)
 
     def forward(self, x, emb=None):
         """
@@ -42,13 +48,13 @@ class PositionEmbedding(nn.Module):
             torch.tensor: [bs, seq_len, emb_dim] - positional embedding(+ emb if given).
         """
         bs, seq_len, _ = x.shape
-        theta = (torch.arange(self.emb_dim))/(self.k**(torch.arange(0, seq_len, 2)/self.emb_dim))
-        theta = theta.float().to_device(x.device)
+        theta = (torch.arange(seq_len))[:, None]*self.inv_freq
+        theta = theta.float().to(x.device)
         pe = torch.cat((theta.sin()[..., None], theta.cos()[..., None]), dim=-1)
-        pe = rearrange([theta.sin(), theta.cos()], 'n b l d -> b l d n')
-        pe = rearrange(pe, 'b l d n -> b l (d n)')
-        pe = pe if seq_len%2 == 0 else pe[:, :-1, :]
+        pe = rearrange([theta.sin(), theta.cos()], 'n l d -> l (d n)')
+        pe = repeat(pe, 'l d -> n l d', n=bs)
         return pe if emb is None else pe + emb
+
 
 
 class Attention(nn.Module):
@@ -173,11 +179,13 @@ class SubLayer(nn.Module):
         dims (int/tuple[int]): Layer Normalization feature dimension.
     """
     def __init__(self, module, dims):
-        self.module = module
+        super().__init__()
+        self.layer = module
         self.layernorm = nn.LayerNorm(dims)
 
     def forward(self, x, *args, **kwargs):
-        y, *_ = self.module(x, *args, **kwargs)
+        y = self.layer(x, *args, **kwargs)
+        y = y[0] if isinstance(y, (tuple, list)) else y
         return self.layernorm(x + y)
 
 
@@ -192,11 +200,11 @@ class FFN(nn.Module):
     def __init__(self, emb_dim, act=nn.ReLU):
         super().__init__()
         self.emb_dim = emb_dim
-        self.ff = nn.Sequential([
+        self.ff = nn.Sequential(
             nn.Linear(emb_dim, 4*emb_dim),
             act(),
             nn.Linear(4*emb_dim, emb_dim)
-        ])
+        )
 
     def forward(self, x):
         return self.ff(x)
