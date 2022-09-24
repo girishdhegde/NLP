@@ -7,7 +7,6 @@ Refs:
 """
 
 
-from email.errors import HeaderMissingRequiredValue
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,13 +17,38 @@ __author__ = "__Girish_Hegde__"
 
 
 class Embedding(nn.Module):
-    def __init__(self):
+    def __init__(self, vocab_size, emb_dim, scale=1):
         super().__init__()
+        self.embedder = nn.Embedding(vocab_size, emb_dim)
+        self.scale = scale
+
+    def forward(self, x):
+        return self.embedder(x)*self.scale
 
 
 class PositionEmbedding(nn.Module):
-    def __init__(self):
+    def __init__(self, emb_dim, k=10_000):
         super().__init__()
+        self.emb_dim = emb_dim
+        self.k = k
+
+    def forward(self, x, emb=None):
+        """
+        Args:
+            x (torch.tensor): [bs, seq_len, emb_dim] - tensor.
+            emb (torch.tensor): [bs, seq_len, emb_dim] - embedding.
+
+        Returns:
+            torch.tensor: [bs, seq_len, emb_dim] - positional embedding(+ emb if given).
+        """
+        bs, seq_len, _ = x.shape
+        theta = (torch.arange(self.emb_dim))/(self.k**(torch.arange(0, seq_len, 2)/self.emb_dim))
+        theta = theta.float().to_device(x.device)
+        pe = torch.cat((theta.sin()[..., None], theta.cos()[..., None]), dim=-1)
+        pe = rearrange([theta.sin(), theta.cos()], 'n b l d -> b l d n')
+        pe = rearrange(pe, 'b l d n -> b l (d n)')
+        pe = pe if seq_len%2 == 0 else pe[:, :-1, :]
+        return pe if emb is None else pe + emb
 
 
 class Attention(nn.Module):
@@ -196,7 +220,7 @@ class Encoder(nn.Module):
         return self.layers(x)
 
 
-class Decoder(nn.Module):
+class Decoder(nn.Module):  # causal cross attn decoder
     def __init__(self, emb_dim, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
         super().__init__()
         self.emb_dim = emb_dim
@@ -224,8 +248,19 @@ class Decoder(nn.Module):
         return x
 
 
-class Transformer(nn.Module):
-    def __init__(self):
-        super().__init__()
+# class Transformer(nn.Module):
+#     def __init__(self, emb_dim, vocab_size, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
+#         super().__init__()
+#         self.emb_dim = emb_dim
+#         self.vocab_size = vocab_size
+#         self.heads = heads
+#         self.num_layers = num_layers
 
+#         self.emb = Embedding(emb_dim, vocab_size)
+#         self.pos_emb = PositionEmbedding(emb_dim, vocab_size)
+#         self.enc = Encoder(emb_dim, heads, num_layers, attn_act, ffn_act, dropout)
+#         self.dec = Decoder(emb_dim, heads, num_layers, attn_act, ffn_act, dropout)
+#         self.to_logits = nn.Linear(emb_dim, vocab_size)
 
+#     def forward(x):
+#         return x
