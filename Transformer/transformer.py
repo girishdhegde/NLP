@@ -47,9 +47,9 @@ class PositionEmbedding(nn.Module):
         Returns:
             torch.tensor: [bs, seq_len, emb_dim] - positional embedding(+ emb if given).
         """
-        bs, seq_len, _ = x.shape
-        theta = (torch.arange(seq_len))[:, None]*self.inv_freq
-        theta = theta.float().to(x.device)
+        bs, seq_len = x.shape
+        theta = (torch.arange(seq_len, device=x.device))[:, None]*self.inv_freq
+        theta = theta.float()
         pe = torch.cat((theta.sin()[..., None], theta.cos()[..., None]), dim=-1)
         pe = rearrange([theta.sin(), theta.cos()], 'n l d -> l (d n)')
         pe = repeat(pe, 'l d -> n l d', n=bs)
@@ -118,8 +118,8 @@ class MHA(nn.Module):
         emb_dim (int): dimension.
         heads (int): number of heads. (dq = dk = dv = d = emb_dim/h).
         bias (bool): adde bias to input and output projection layers.
-        pre_act (nn.Module): pre attention projection activation function.( applied on Q, K, V).
-        post_act (nn.Module): output projection activation function. (applied after attn).
+        pre_act (nn.Module): pre attention projection activation. (applied on Q, K, V).
+        post_act (nn.Module): output projection activation. (applied after attn).
         dropout (float): dropout probability.
     """
     def __init__(self, emb_dim, heads=1, bias=False, pre_act=None, post_act=None, dropout=None):
@@ -173,26 +173,6 @@ class MHA(nn.Module):
         return out, rearrange(attn, '(b h) i j -> b h i j', h=self.heads)
 
 
-class SubLayer(nn.Module):
-    """ SubLayer
-        out = LayerNorm(x + module(x))
-        author: girish d. hegde
-
-    Args:
-        module (nn.Module): MHA or FeedForward initialized object.
-        dims (int/tuple[int]): Layer Normalization feature dimension.
-    """
-    def __init__(self, module, dims):
-        super().__init__()
-        self.layer = module
-        self.layernorm = nn.LayerNorm(dims)
-
-    def forward(self, x, *args, **kwargs):
-        y = self.layer(x, *args, **kwargs)
-        y = y[0] if isinstance(y, (tuple, list)) else y
-        return self.layernorm(x + y)
-
-
 class FFN(nn.Module):
     """ FeedForward Network
         author: girish d. hegde
@@ -212,6 +192,26 @@ class FFN(nn.Module):
 
     def forward(self, x):
         return self.ff(x)
+
+
+class SubLayer(nn.Module):
+    """ SubLayer
+        out = LayerNorm(x + module(x))
+        author: girish d. hegde
+
+    Args:
+        module (nn.Module): MHA or FeedForward initialized object.
+        dims (int/tuple[int]): Layer Normalization feature dimension.
+    """
+    def __init__(self, module, dims):
+        super().__init__()
+        self.layer = module
+        self.layernorm = nn.LayerNorm(dims)
+
+    def forward(self, x, *args, **kwargs):
+        y = self.layer(x, *args, **kwargs)
+        y = y[0] if isinstance(y, (tuple, list)) else y
+        return self.layernorm(x + y)
 
 
 class Encoder(nn.Module):
@@ -260,19 +260,58 @@ class Decoder(nn.Module):  # causal cross attn decoder
         return x
 
 
-# class Transformer(nn.Module):
-#     def __init__(self, emb_dim, vocab_size, heads, num_layers=2, attn_act=nn.Identity, ffn_act=nn.ReLU, dropout=0.0):
-#         super().__init__()
-#         self.emb_dim = emb_dim
-#         self.vocab_size = vocab_size
-#         self.heads = heads
-#         self.num_layers = num_layers
+class Transformer(nn.Module):
+    """ Transformer - Attention is All You Need
+        author: girish d. hegde
 
-#         self.emb = Embedding(emb_dim, vocab_size)
-#         self.pos_emb = PositionEmbedding(emb_dim, vocab_size)
-#         self.enc = Encoder(emb_dim, heads, num_layers, attn_act, ffn_act, dropout)
-#         self.dec = Decoder(emb_dim, heads, num_layers, attn_act, ffn_act, dropout)
-#         self.to_logits = nn.Linear(emb_dim, vocab_size)
+    Args:
+        emb_dim (int): d_model = embedding dimension.
+        inp_vocab_size (int): input vocabulary size.
+        tgt_vocab_size (_type_): output/target vocabulary size.
+        heads (int): number of heads per MHA layer.
+        num_layers (int): number of encoder/decoder layers.
+        pre_attn_act (nn.Module): pre attention projection activation in each layer. (applied on Q, K, V).
+        post_attn_act (nn.Module): output projection activation in each layer. (applied after attn).
+        ffn_act (nn.Module): Feed forward layer activation.
+        dropout (float): Each attention layer dropout probability.
+    """
+    def __init__(self,
+            emb_dim, inp_vocab_size, tgt_vocab_size,
+            heads, num_layers=2,
+            pre_attn_act=None, post_attn_act=None, ffn_act=nn.ReLU,
+            dropout=0.0,
+        ):
+        super().__init__()
+        self.emb_dim = emb_dim
+        self.inp_vocab_size = inp_vocab_size
+        self.tgt_vocab_size = tgt_vocab_size
+        self.heads = heads
+        self.num_layers = num_layers
 
-#     def forward(x):
-#         return x
+        self.inp_emb = Embedding(inp_vocab_size, emb_dim, (emb_dim**0.5))
+        self.inp_pos_emb = PositionEmbedding(emb_dim)
+        self.tgt_emb = Embedding(tgt_vocab_size, emb_dim, (emb_dim**0.5))
+        self.tgt_pos_emb = PositionEmbedding(emb_dim)
+
+        self.enc = Encoder(emb_dim, heads, num_layers, pre_attn_act, post_attn_act, ffn_act, dropout)
+        self.dec = Decoder(emb_dim, heads, num_layers, pre_attn_act, post_attn_act, ffn_act, dropout)
+        self.to_logits = nn.Linear(emb_dim, tgt_vocab_size)
+
+    def forward(self, x, y):
+        """ Transformer forward
+            author: girish d. hegde
+
+        Args:
+            x (torch.tensor[torch.int64]): [bs, inp_seq_len] - input token encodings.
+            y (torch.tensor[torch.int64]): [bs, tgt_seq_len] - target token encodings.
+
+        Returns:
+            torch.tensor[torch.float32]: [bs, tgt_seq_len, tgt_vocab_size] - target logits.
+        """
+        x = self.inp_emb(x) + self.inp_pos_emb(x)
+        x = self.enc(x)
+        y = self.tgt_emb(y) + self.tgt_pos_emb(y)
+        y = self.dec(y, context=x)
+        y = self.to_logits(y)
+        return y
+
