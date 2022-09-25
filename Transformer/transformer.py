@@ -315,3 +315,12 @@ class Transformer(nn.Module):
         y = self.to_logits(y)
         return y
 
+    @torch.no_grad()
+    def generate(self, x):
+        return x
+
+    def save_ckpt(self, filename):
+        return None
+
+    def load_ckpt(self, data=None, filename=None):
+        return None
