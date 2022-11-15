@@ -84,7 +84,7 @@ class WordTokenizer:
 
     @classmethod
     def remove_tokens(cls, words, tokens, token2freq=None, filter_tokens=()):
-        """ Function to remove tokens with occarances less than given frequency.
+        """ Function to remove tokens.
             author: girish d. hegde
 
         Args:
