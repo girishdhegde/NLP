@@ -15,6 +15,14 @@ class InOutTokenizer:
     """ input output sentence word level tokenization
         author: girish d. hegde
 
+    text data corpus format:
+        filename.txt
+            <in_token> input sentence 1. <out_token> output sentence 1.
+            <in_token> input sentence 2. <out_token> output sentence 2.
+            ...
+            ...
+            <in_token> input sentence n. <out_token> output sentence n.
+
     Refs:
         https://github.com/brendenlake/SCAN
         https://towardsdatascience.com/dynamic-word-tokenization-with-regex-tokenizer-801ae839d1cd
@@ -82,138 +90,89 @@ class InOutTokenizer:
 
         return corpus, in_, out, in_tokens, out_tokens
 
-#     @classmethod
-#     def filter_sparse(cls, words, tokens, frequency=1):
-#         """ Function to remove tokens with occarances less than given frequency.
-#             author: girish d. hegde
+    @classmethod
+    def get_lookups(cls, tokens):
+        """ Fucntion to get tokens to integer and interger to token lookups.
+            author: girish d. hegde
 
-#         Args:
-#             words (list[str]): list of tokens/words of corpus.
-#             tokens (list[str]): unique tokens/words.
-#             frequency (int): minimum token/word occarance threshold.
+        Args:
+             tokens (list[str]): unique tokens/words.
 
-#         Returns:
-#             list[str]: words - list of filtered tokens/words.
-#             list[str]: tokens - remaining tokens after filtering.
-#             dict[str:int]: token2freq - dictionary/lookup of remaining token frequencies.
-#         """
-#         token_count = [words.count(token) for token in tokens]
-#         token2freq = dict(zip(tokens, token_count))
-#         words = [token for token in words if token2freq[token] >= frequency]
-#         tokens = [token for token in tokens if token2freq[token] >= frequency]
-#         token2freq = {token:token2freq[token] for token in tokens}
-#         return words, tokens, token2freq
+        Returns:
+            dict[int:str]: int2token - integer to token lookup.
+            dict[int:str]: token2int - token to integer lookup.
+       """
+        int2token = dict(enumerate(tokens))
+        token2int = {tk:i for i, tk in int2token.items()}
+        return int2token, token2int
 
-#     @classmethod
-#     def remove_tokens(cls, words, tokens, token2freq=None, filter_tokens=()):
-#         """ Function to remove tokens.
-#             author: girish d. hegde
+    @classmethod
+    def write_json(cls, filename, in_int2tk, out_int2tk):
+        """ Functiont to write integer to tokens dictionary into json file.
+            author: girish d. hegde
 
-#         Args:
-#             words (list[str]): list of tokens/words of corpus.
-#             tokens (list[str]): unique tokens.
-#             token2freq (dict[str:int]): dictionary/lookup of token occarances count.
-#             filter_tokens (tuple[str]): tuple of tokens to be removed.
+        Args:
+            filename (Path): path to .json file.
+            in_int2tk (dict[int:str]): integer to token lookup of input sentences.
+            out_int2tk (dict[int:str]): integer to token lookup of output sentences.
+        """
+        with open(filename, 'w') as fp:
+            json.dump([in_int2tk, out_int2tk], fp, indent=4)
+        return True
 
-#         Returns:
-#             list[str]: words - list of filtered tokens/words.
-#             list[str]: tokens - remaining tokens after filtering.
-#             dict[str:int]: token2freq - dictionary/lookup of remaining token frequencies.
-#         """
-#         if len(filter_tokens):
-#             filter_tokens = set(filter_tokens)
-#             words = [token for token in words if token not in filter_tokens]
-#             tokens = [token for token in tokens if token not in filter_tokens]
-#             if token2freq is not None:
-#                 token2freq = {token:token2freq[token] for token in tokens if token not in filter_tokens}
-#         return words, tokens, token2freq
+    @classmethod
+    def read_json(cls, filename):
+        """ Functiont to read integer to tokens json file.
+            author: girish d. hegde
 
-#     @classmethod
-#     def get_lookups(cls, tokens):
-#         """ Fucntion to get tokens to integer and interger to token lookups.
-#             author: girish d. hegde
+        Args:
+            filename (Path): path to .json file.
 
-#         Args:
-#              tokens (list[str]): unique tokens/words.
+        Returns:
+            dict[int:str]: in_int2tk - integer to token lookup of input sentences.
+            dict[int:str]: in_int2tk - integer to token lookup of output sentences.
+        """
 
-#         Returns:
-#             dict[int:str]: int2token - integer to token lookup.
-#             dict[int:str]: token2int - token to integer lookup.
-#        """
-#         int2token = dict(enumerate(tokens))
-#         token2int = {tk:i for i, tk in int2token.items()}
-#         return int2token, token2int
+        with open(filename) as fp:
+            in_int2tk, out_int2tk = json.load(fp)
+        in_int2tk = {int(k):v for k, v in in_int2tk.items()}
+        out_int2tk = {int(k):v for k, v in out_int2tk.items()}
+        return in_int2tk, out_int2tk
 
-#     @classmethod
-#     def write_json(cls, filename, int2token):
-#         """ Functiont to write integer to tokens dictionary into json file.
-#             author: girish d. hegde
+    @classmethod
+    def run(cls, filename, in_token='IN:', out_token='OUT:', lowercase=True, out_json=None, encoding='utf-8', verbose=False):
+        """ Function run tokenization pipeline on text corpus file.
+                1. read file into string corpus.
+                2. convert corpus into input output tokens.
+                3. get tokens to integer and vice versa lookups.
+                4. write token lookups.
+            author: girish d. hegde
 
-#         Args:
-#             filename (Path): path to .json file.
-#             int2token (dict[int:str]): integer to token lookup.
-#         """
-#         with open(filename, 'w') as fp:
-#             json.dump(int2token, fp, indent=4)
-#         return True
+        Args:
+            filename (Path): path to .txt file containg corpus of text data.
+            in_token (str): token representing input sentence.
+            out_token (str): token representing output sentence.
+            lowercase (bool): convert all tokens to lowercase.
+            out_json (Path): path to .json file for writing int2token lookup.
+            encoding (str): input file encoding.
+            verbose (bool): print info.
 
-#     @classmethod
-#     def read_json(cls, filename):
-#         """ Functiont to read integer to tokens json file.
-#             author: girish d. hegde
-
-#         Args:
-#             filename (Path): path to .json file.
-
-#         Returns:
-#             dict[int:str]: int2token - integer to token lookup.
-#         """
-
-#         with open(filename) as fp:
-#             int2token = json.load(fp)
-#         int2token = {int(k):v for k, v in int2token.items()}
-#         return int2token
-
-#     @classmethod
-#     def run(cls, filename, lowercase=True, min_frequency=1, exclude=(), out_json=None, encoding='utf-8', verbose=False):
-#         """ Function run tokenization pipeline on text corpus file.
-#                 1. read file into string corpus.
-#                 2. convert corpus into tokens.
-#                 3. filter less common tokens.
-#                 4. get tokens to integer and vice versa lookups.
-#                 5. write token lookups.
-#             author: girish d. hegde
-
-#         Args:
-#             filename (Path): path to .txt file containg corpus of text data.
-#             lowercase (bool): convert all tokens to lowercase.
-#             min_frequency (int): minimum token/word occarance threshold.
-#             exclude (tuple[str]): tokens to be removed/exluded.
-#             out_json (Path): path to .json file for writing int2token lookup.
-#             encodeing (str): input file encoding.
-#             verbose (bool): print info.
-
-#         Returns:
-#             list[str]: words - list of tokens/words in corpus.
-#             list[str]: tokens - unique tokens.
-#             dict[str:int]: token2ifreq - dictionary/lookup of token occarance frequencies.
-#             dict[int:str]: int2token - integer to token lookup.
-#             dict[int:str]: token2int - token to integer lookup.
-#         """
-#         corpus = cls.read(filename, encoding)
-#         if verbose: print('Total characters in corpus = ', len(corpus))
-#         corpus, words, tokens = cls.tokenize(corpus, lowercase)
-#         if verbose: print('Total unique tokens = ', len(tokens))
-#         if verbose: print('Total words/tokens in corpus = ', len(words))
-#         words, tokens, token2freq = cls.filter_sparse(words, tokens, min_frequency)
-#         if verbose: print('Total unique tokens after filtering by count = ', len(tokens))
-#         if verbose: print('Total words/tokens in corpus after filtering by count = ', len(words))
-#         words, tokens, token2freq = cls.remove_tokens(words, tokens, token2freq, exclude)
-#         if verbose: print('Total unique tokens after exclude = ', len(tokens))
-#         if verbose: print('Total words/tokens in corpus after exclude = ', len(words))
-#         int2token, token2int = cls.get_lookups(tokens)
-#         if out_json is not None: cls.write_json(out_json, int2token)
-#         return words, tokens, token2freq, int2token, token2int
+        Returns:
+            list[str]: words - list of tokens/words in corpus.
+            list[str]: tokens - unique tokens.
+            dict[int:str]: int2token - integer to token lookup.
+            dict[int:str]: token2int - token to integer lookup.
+        """
+        corpus = cls.read(filename, encoding)
+        if verbose: print('Total characters in corpus = ', len(corpus))
+        _, in_corpus, out_corpus, in_tokens, out_tokens = cls.tokenize(corpus, lowercase)
+        if verbose: print('Total input sentence unique tokens = ', len(in_tokens))
+        if verbose: print('Total output sentence unique tokens = ', len(out_tokens))
+        if verbose: print('Total sentences = ', len(in_corpus))
+        in_int2tk, in_tk2int = cls.get_lookups(in_tokens)
+        out_int2tk, out_tk2int = cls.get_lookups(out_tokens)
+        if out_json is not None: cls.write_json(out_json, in_int2tk, out_int2tk)
+        return in_corpus, out_corpus, in_int2tk, out_int2tk
 
 
 # class TextSet(Dataset):
