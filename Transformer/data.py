@@ -46,7 +46,7 @@ class InOutTokenizer:
         return corpus
 
     @classmethod
-    def tokenize(cls, corpus, in_token='IN:', out_token='OUT:', lowercase=True):
+    def tokenize(cls, corpus, in_token='IN:', out_token='OUT:', start_token='<S>', end_token='<E>', lowercase=True):
         """ Fucntion to tokenize corpus of text to input output sentence tokens/words.
             author: girish d. hegde
 
@@ -54,6 +54,8 @@ class InOutTokenizer:
             corpus (str/generator): text corpus.
             in_token (str): token representing input sentence.
             out_token (str): token representing output sentence.
+            start_token (str): start of sentence indication token.
+            end_token (str): end of sentence indication token.
             lowercase (bool): convert all tokens to lowercase.
 
         Returns:
@@ -82,12 +84,11 @@ class InOutTokenizer:
 
         in_, out = [], []
         for data in inout:
-            in_.append(process(data[0]))
-            out.append(process(data[1]))
+            in_.append([start_token] + process(data[0]) + [end_token])
+            out.append([start_token] + process(data[1]) + [end_token])
 
         in_tokens = list(set(word for sentence in in_ for word in sentence))
         out_tokens = list(set(word for sentence in out for word in sentence))
-
         return corpus, in_, out, in_tokens, out_tokens
 
     @classmethod
