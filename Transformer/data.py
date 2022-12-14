@@ -141,7 +141,10 @@ class InOutTokenizer:
         return in_int2tk, out_int2tk
 
     @classmethod
-    def run(cls, filename, in_token='IN:', out_token='OUT:', lowercase=True, out_json=None, encoding='utf-8', verbose=False):
+    def run(
+            cls, filename, in_token='IN:', out_token='OUT:', start_token='<S>', end_token='<E>',
+            lowercase=True, out_json=None, encoding='utf-8', verbose=False,
+        ):
         """ Function run tokenization pipeline on text corpus file.
                 1. read file into string corpus.
                 2. convert corpus into input output tokens.
@@ -153,6 +156,8 @@ class InOutTokenizer:
             filename (Path): path to .txt file containg corpus of text data.
             in_token (str): token representing input sentence.
             out_token (str): token representing output sentence.
+            start_token (str): start of sentence indication token.
+            end_token (str): end of sentence indication token.
             lowercase (bool): convert all tokens to lowercase.
             out_json (Path): path to .json file for writing int2token lookup.
             encoding (str): input file encoding.
@@ -166,7 +171,9 @@ class InOutTokenizer:
         """
         corpus = cls.read(filename, encoding)
         if verbose: print('Total characters in corpus = ', len(corpus))
-        _, in_corpus, out_corpus, in_tokens, out_tokens = cls.tokenize(corpus, lowercase)
+        _, in_corpus, out_corpus, in_tokens, out_tokens = cls.tokenize(
+            corpus, in_token, out_token, start_token, end_token, lowercase
+        )
         if verbose: print('Total input sentence unique tokens = ', len(in_tokens))
         if verbose: print('Total output sentence unique tokens = ', len(out_tokens))
         if verbose: print('Total sentences = ', len(in_corpus))
