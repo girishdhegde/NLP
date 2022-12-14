@@ -164,10 +164,10 @@ class InOutTokenizer:
             verbose (bool): print info.
 
         Returns:
-            list[str]: words - list of tokens/words in corpus.
-            list[str]: tokens - unique tokens.
-            dict[int:str]: int2token - integer to token lookup.
-            dict[int:str]: token2int - token to integer lookup.
+            list[list[str]]: in_corpus - [list of input tokens/words of sentence for sentence in corpus].
+            list[list[str]]: out_corpus - [list of output tokens/words of sentence for sentence in corpus].
+            dict[int:str]: in_int2tk - integer to token lookup of input sentences.
+            dict[int:str]: out_int2tk - integer to token lookup of output sentences.
         """
         corpus = cls.read(filename, encoding)
         if verbose: print('Total characters in corpus = ', len(corpus))
@@ -183,35 +183,40 @@ class InOutTokenizer:
         return in_corpus, out_corpus, in_int2tk, out_int2tk
 
 
-# class TextSet(Dataset):
-#     """ Pytorch word level Dataset class for text corpus.
-#         author: girish d. hegde
+class TranslationSet(Dataset):
+    """ Pytorch word level Dataset class for input output sentence pairs text.
+        author: girish d. hegde
 
-#     Args:
-#         words (list[str]): list of tokens/words in corpus.
-#         int2token (dict[int:str]): integer to token lookup.
-#         seq_len (int): sequence length.
-#         device (torch.device/str):  torch data device 'cuda' or 'cpu'.
-#     """
-#     def __init__(self, words, int2token, seq_len=50, device='cuda'):
-#         super().__init__()
-#         token2int = {tk:i for i, tk in int2token.items()}
-#         self.vocab_size = len(int2token)
-#         self.seq_len = seq_len
-#         self.encoded = torch.tensor([token2int[token] for token in words], dtype=torch.int64, device=device)
-#         # self.one_hot = torch.eye(self.vocab_size, dtype=torch.float32, device=device)
-#         self.len = len(words) - (seq_len + 1)
+    Args:
+        in_corpus (list[list[str]]): [list of input tokens/words of sentence for sentence in corpus].
+        out_corpus (list[list[str]]): [list of output tokens/words of sentence for sentence in corpus].
+        in_int2tk (dict[int:str]): integer to token lookup of input sentences.
+        out_int2tk (dict[int:str]): integer to token lookup of output sentences.
+        device (torch.device/str):  torch data device 'cuda' or 'cpu'.
+    """
+    def __init__(self, in_corpus, out_corpus, in_int2tk, out_int2tk, device='cuda'):
+        super().__init__()
+        in_tk2int = {tk:i for i, tk in in_int2tk.items()}
+        out_tk2int = {tk:i for i, tk in out_int2tk.items()}
+        self.in_vocab_size = len(in_int2tk)
+        self.out_vocab_size = len(out_int2tk)
+        self.in_enc = [
+            torch.tensor([in_tk2int[tk] for tk in sentence], dtype=torch.int64, device=device)
+            for sentence in in_corpus
+        ]
+        self.out_enc = [
+            torch.tensor([out_tk2int[tk] for tk in sentence], dtype=torch.int64, device=device)
+            for sentence in out_corpus
+        ]
+        self.len = len(in_corpus)
 
-#     def __len__(self):
-#         return self.len
+    def __len__(self):
+        return self.len
 
-#     def __getitem__(self, index):
-#         """
-#         Returns:
-#             torch.tensor: [seq_len, ] - input tokens encoding.
-#             torch.tensor: [seq_len, ] - ouput tokens encoding.
-#         """
-#         start = random.randint(0, self.len)
-#         end = start + self.seq_len
-#         # return self.encoded[start:end], self.one_hot[self.encoded[start + 1:end + 1]]
-#         return self.encoded[start:end], self.encoded[start + 1:end + 1]
+    def __getitem__(self, index):
+        """
+        Returns:
+            torch.tensor: [seq_len, ] - input tokens encoding.
+            torch.tensor: [seq_len, ] - ouput tokens encoding.
+        """
+        return self.in_enc[index], self.out_enc[index]
