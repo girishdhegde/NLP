@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from transformer import Transformer
-from data import InOutTokenizer, TranslationSet
+from data import InOutTokenizer, TranslationSet, SeqCollater
 from utils import save_checkpoint, load_checkpoint # write_pred
 
 
@@ -39,7 +39,8 @@ LOGDIR.mkdir(parents=True, exist_ok=True)
 
 in_corpus, out_corpus, in_int2tk, out_int2tk = InOutTokenizer.run(
     DATAPATH, in_token='IN:', out_token='OUT:',
-    start_token='<S>', end_token='<E>', lowercase=False,
+    start_token='<S>', end_token='<E>', pad_token='<P>', ukn_token='<U>',
+    lowercase=False,
     out_json=LOGDIR/'tokens.json', encoding='utf-8',
     verbose=True,
 )
@@ -50,7 +51,8 @@ net = Transformer(
     HEADS, NUM_LAYERS, PRE_ATTN_ACT, POST_ATTN_ACT,
     FFN_ATTN_ACT, DROPOUT,
 )
-net, start_epoch, best, in_int2tk_, out_int2tk_, start_token, end_token = load_checkpoint(LOAD, net, DEVICE)
+load_ = load_checkpoint(LOAD, net, DEVICE)
+net, start_epoch, best, in_int2tk_, out_int2tk_, start_token, end_token, pad_token, ukn_token = load_
 in_int2tk = in_int2tk if in_int2tk_ is None else in_int2tk_
 out_int2tk = out_int2tk if out_int2tk_ is None else out_int2tk_
 translation_set = TranslationSet(in_corpus, out_corpus, in_int2tk, out_int2tk, DEVICE)
@@ -64,13 +66,18 @@ print('Total training samples = ', len(translation_set))
 print(f'Total model parameters = {params} = {params/1e6}M')
 # print(net)
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!
-# collate function is required
-trainloader = DataLoader(translation_set, batch_size=BATCH_SIZE, shuffle=True)
+
+inp_pad_value = {tk:i for i, tk in in_int2tk.items()}['<P>']
+tgt_pad_value = {tk:i for i, tk in out_int2tk.items()}['<P>']
+trainloader = DataLoader(
+    translation_set, batch_size=BATCH_SIZE, shuffle=True,
+    collate_fn=SeqCollater(inp_pad_value, tgt_pad_value),
+)
 optimizer = optim.Adam(net.parameters(), lr=LR)
 criterion = nn.CrossEntropyLoss()
 
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!
 net.train()
 for epoch in range(start_epoch, EPOCHS):
     trainloss = 0

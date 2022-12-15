@@ -9,13 +9,15 @@ __author__ = "__Girish_Hegde__"
 
 
 def save_checkpoint(
-        in_int2tk, out_int2tk, start_token, end_token,
+        in_int2tk, out_int2tk,
+        start_token, end_token, pad_token, ukn_token,
         net, epoch, loss, best, filename,
     ):
     ckpt = {
         'dataset':{
             'in_int2tk':in_int2tk, 'out_int2tk':out_int2tk,
             'start_token':start_token, 'end_token':end_token,
+            'pad_token':pad_token, 'ukn_token':ukn_token,
         },
         'net':{
             'kwargs':net.get_init_params(),
@@ -33,6 +35,7 @@ def load_checkpoint(filename, net, device='cpu'):
     epoch, best = 0, float('inf')
     in_int2tk, out_int2tk = None, None
     start_token, end_token = None, None
+    pad_token, ukn_token = None, None
     if filename is not None:
         if Path(filename).is_file():
             ckpt = torch.load(filename, map_location=device)
@@ -42,7 +45,7 @@ def load_checkpoint(filename, net, device='cpu'):
                 epoch, loss, best = ckpt['training'].values()
                 print('Training parameters loaded successfully ...')
             if 'dataset' in ckpt:
-                in_int2tk, out_int2tk, start_token, end_token = ckpt['dataset'].values()
+                in_int2tk, out_int2tk, start_token, end_token, pad_token, ukn_token = ckpt['dataset'].values()
                 print('Dataset parameters loaded successfully ...')
-    return net, epoch, best, in_int2tk, out_int2tk, start_token, end_token
+    return net, epoch, best, in_int2tk, out_int2tk, start_token, end_token, pad_token, ukn_token
 

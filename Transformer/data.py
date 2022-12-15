@@ -143,6 +143,7 @@ class InOutTokenizer:
     @classmethod
     def run(
             cls, filename, in_token='IN:', out_token='OUT:', start_token='<S>', end_token='<E>',
+            pad_token='<P>', ukn_token='<U>',
             lowercase=True, out_json=None, encoding='utf-8', verbose=False,
         ):
         """ Function run tokenization pipeline on text corpus file.
@@ -158,6 +159,8 @@ class InOutTokenizer:
             out_token (str): token representing output sentence.
             start_token (str): start of sentence indication token.
             end_token (str): end of sentence indication token.
+            pad_token (str): padding place holder indication token.
+            ukn_token (str): token for unknown words in the vocab.
             lowercase (bool): convert all tokens to lowercase.
             out_json (Path): path to .json file for writing int2token lookup.
             encoding (str): input file encoding.
@@ -174,6 +177,8 @@ class InOutTokenizer:
         _, in_corpus, out_corpus, in_tokens, out_tokens = cls.tokenize(
             corpus, in_token, out_token, start_token, end_token, lowercase
         )
+        in_tokens = in_tokens + [pad_token, ukn_token]
+        out_tokens = out_tokens + [pad_token, ukn_token]
         if verbose: print('Total input sentence unique tokens = ', len(in_tokens))
         if verbose: print('Total output sentence unique tokens = ', len(out_tokens))
         if verbose: print('Total sentences = ', len(in_corpus))
@@ -220,3 +225,36 @@ class TranslationSet(Dataset):
             torch.tensor: [seq_len, ] - ouput tokens encoding.
         """
         return self.in_enc[index], self.out_enc[index]
+
+
+class SeqCollater:
+    """ SeqCollater - variable sequence length collate function creater.
+
+    Args:
+        inp_pad_value (int): input padding value.
+        tgt_pad_value (int): target padding value.
+    """
+    def __init__(self, inp_pad_value=0, tgt_pad_value=0):
+        self.inp_pad_value = inp_pad_value
+        self.tgt_pad_value = tgt_pad_value
+
+    def __call__(self, batch):
+        """
+        Args:
+            batch (list[tuple[torch.tensor]]): [bs, ] - samples from __getitem__ dataset func.
+
+        Returns:
+            tuple[torch.tensor]:
+                torch.tensor[int64]: [bs, max_seq_len] - same sequence size batched input data.
+                torch.tensor[int64]: [bs, max_seq_len] - same sequence size batched target data.
+        """
+        inp = torch.nn.utils.rnn.pad_sequence(
+            [data[0] for data in batch],
+            batch_first=True, padding_value=self.inp_pad_value
+        )
+
+        tgt = torch.nn.utils.rnn.pad_sequence(
+            [data[1] for data in batch],
+            batch_first=True, padding_value=self.tgt_pad_value
+        )
+        return inp, tgt
