@@ -287,6 +287,10 @@ class Transformer(nn.Module):
         self.tgt_vocab_size = tgt_vocab_size
         self.heads = heads
         self.num_layers = num_layers
+        self.pre_attn_act = pre_attn_act
+        self.post_attn_act = post_attn_act
+        self.ffn_act = ffn_act
+        self.dropout = dropout
 
         self.inp_emb = Embedding(inp_vocab_size, emb_dim, (emb_dim**0.5))
         self.inp_pos_emb = PositionEmbedding(emb_dim)
@@ -319,8 +323,25 @@ class Transformer(nn.Module):
     def generate(self, x):
         return x
 
-    def save_ckpt(self, filename):
-        return None
+    def get_init_params(self, ):
+        kwargs = {
+            'emb_dim':emb_dim, 'inp_vocab_size':inp_vocab_size, 'tgt_vocab_size':tgt_vocab_size,
+            'heads':heads, 'num_layers':num_layers,
+            'pre_attn_act':pre_attn_act, 'post_attn_act':post_attn_act, 'ffn_act':ffn_act,
+            'dropout':dropout,
+        }
+        return kwargs
 
-    def load_ckpt(self, data=None, filename=None):
-        return None
+    def save_ckpt(self, filename):
+        ckpt = {
+            'kwargs':self.get_init_params(),
+            'state_dict':self.state_dict
+        }
+        torch.save(ckpt, filename)
+        return ckpt
+
+    def create_from_ckpt(cls, filename):
+        ckpt = torch.load(filename)
+        net = cls(**ckpt['kwargs'])
+        net.load_state_dict(ckpt['state_dict'])
+        return net

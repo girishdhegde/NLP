@@ -50,7 +50,7 @@ net = Transformer(
     HEADS, NUM_LAYERS, PRE_ATTN_ACT, POST_ATTN_ACT,
     FFN_ATTN_ACT, DROPOUT,
 )
-net, best, in_int2tk_, out_int2tk_, start_epoch = load_checkpoint(LOAD, net, DEVICE)  #!!! load_checkpoint func needs to be defined
+net, start_epoch, best, in_int2tk_, out_int2tk_, start_token, end_token = load_checkpoint(LOAD, net, DEVICE)
 in_int2tk = in_int2tk if in_int2tk_ is None else in_int2tk_
 out_int2tk = out_int2tk if out_int2tk_ is None else out_int2tk_
 translation_set = TranslationSet(in_corpus, out_corpus, in_int2tk, out_int2tk, DEVICE)
