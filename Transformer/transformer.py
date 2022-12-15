@@ -325,21 +325,23 @@ class Transformer(nn.Module):
 
     def get_init_params(self, ):
         kwargs = {
-            'emb_dim':emb_dim, 'inp_vocab_size':inp_vocab_size, 'tgt_vocab_size':tgt_vocab_size,
-            'heads':heads, 'num_layers':num_layers,
-            'pre_attn_act':pre_attn_act, 'post_attn_act':post_attn_act, 'ffn_act':ffn_act,
-            'dropout':dropout,
+            'emb_dim':self.emb_dim,
+            'inp_vocab_size':self.inp_vocab_size, 'tgt_vocab_size':self.tgt_vocab_size,
+            'heads':self.heads, 'num_layers':self.num_layers,
+            'pre_attn_act':self.pre_attn_act, 'post_attn_act':self.post_attn_act, 'ffn_act':self.ffn_act,
+            'dropout':self.dropout,
         }
         return kwargs
 
     def save_ckpt(self, filename):
         ckpt = {
             'kwargs':self.get_init_params(),
-            'state_dict':self.state_dict
+            'state_dict':self.state_dict(),
         }
         torch.save(ckpt, filename)
         return ckpt
 
+    @classmethod
     def create_from_ckpt(cls, filename):
         ckpt = torch.load(filename)
         net = cls(**ckpt['kwargs'])

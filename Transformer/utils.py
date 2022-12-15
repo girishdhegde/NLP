@@ -10,7 +10,7 @@ __author__ = "__Girish_Hegde__"
 
 def save_checkpoint(
         in_int2tk, out_int2tk, start_token, end_token,
-        net, epoch, loss, best, filename
+        net, epoch, loss, best, filename,
     ):
     ckpt = {
         'dataset':{
@@ -29,7 +29,7 @@ def save_checkpoint(
     return ckpt
 
 
-def ckpt_checkpoint(filename, net, device='cpu'):
+def load_checkpoint(filename, net, device='cpu'):
     epoch, best = 0, float('inf')
     in_int2tk, out_int2tk = None, None
     start_token, end_token = None, None

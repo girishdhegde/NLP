@@ -7,13 +7,13 @@ from torch.utils.data import DataLoader
 
 from transformer import Transformer
 from data import InOutTokenizer, TranslationSet
-# from utils import save_checkpoint, load_checkpoint, write_pred
+from utils import save_checkpoint, load_checkpoint # write_pred
 
 
 __author__ = "__Girish_Hegde__"
 
 
-EMB_DIM = 32
+EMB_DIM = 128
 HEADS = 8
 NUM_LAYERS = 3
 PRE_ATTN_ACT = None
@@ -78,8 +78,6 @@ for epoch in range(start_epoch, EPOCHS):
         inp, target = inp.permute(1, 0), target.permute(1, 0)  # (bs, seqlen) -> (seqlen, bs)
         timesteps, bs = inp.shape
         h_t, c_t = net.init_hidden(bs, DEVICE)
-        # h_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
-        # c_t = torch.zeros(NUM_LAYERS, bs, HIDDEN_SIZE, device=DEVICE)
 
         optimizer.zero_grad()
         pred, states = net(inp, (h_t, c_t))
