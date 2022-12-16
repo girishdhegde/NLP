@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 
 from transformer import Transformer
 from data import InOutTokenizer, TranslationSet, SeqCollater
-from utils import save_checkpoint, load_checkpoint # write_pred
+from utils import save_checkpoint, load_checkpoint, write_pred
 
 
 __author__ = "__Girish_Hegde__"
@@ -77,19 +77,14 @@ optimizer = optim.Adam(net.parameters(), lr=LR)
 criterion = nn.CrossEntropyLoss()
 
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!
 net.train()
 for epoch in range(start_epoch, EPOCHS):
     trainloss = 0
     for iteration, (inp, target) in enumerate(trainloader):
-        inp, target = inp.permute(1, 0), target.permute(1, 0)  # (bs, seqlen) -> (seqlen, bs)
-        timesteps, bs = inp.shape
-        h_t, c_t = net.init_hidden(bs, DEVICE)
-
         optimizer.zero_grad()
-        pred, states = net(inp, (h_t, c_t))
+        pred = net(inp, target[:, :-1])  # target[:, :-1] -> from <S> till <E>
 
-        loss = criterion(pred.reshape(-1, translation_set.vocab_size), target.reshape(-1))
+        loss = criterion(pred.reshape(-1, translation_set.out_vocab_size), target[:, 1:].reshape(-1))
         loss.backward()
         if GRADIENT_CLIP is not None:
             nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
@@ -104,16 +99,15 @@ for epoch in range(start_epoch, EPOCHS):
     if trainloss < best:
         best = trainloss
         save_checkpoint(
-            net.vocab_size, EMBEDDING_DIM, HIDDEN_SIZE, NUM_LAYERS, int2token,
-            net.state_dict(), epoch, trainloss, best, LOGDIR/f'best.pt'
+            in_int2tk, out_int2tk, '<S>', '<E>', '<P>', '<U>',
+            net, epoch, trainloss, best, LOGDIR/f'best.pt',
         )
-
     if epoch%SAVE_FREQ == 0:
         save_checkpoint(
-            net.vocab_size, EMBEDDING_DIM, HIDDEN_SIZE, NUM_LAYERS, int2token,
-            net.state_dict(), epoch, trainloss, best, LOGDIR/f'checkpoint.pt'
+            in_int2tk, out_int2tk, '<S>', '<E>', '<P>', '<U>',
+            net, epoch, trainloss, best, LOGDIR/f'checkpoint.pt',
         )
-        write_pred(pred[:, 0, :], int2token, LOGDIR/'predictions.txt', label=f'epoch = {epoch}')
+        write_pred(inp[0], pred[0], in_int2tk, out_int2tk, LOGDIR/'predictions.txt', label=f'epoch = {epoch}')
         logfile = LOGDIR/'log.txt'
         log_data = f"epoch: {epoch}/{EPOCHS}, \tloss: {trainloss},\t best_loss: {best}"
         print(f'{"-"*100}\n{log_data}\n{"-"*100}')
