@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 
 from transformer import Transformer
 from data import InOutTokenizer, TranslationSet, SeqCollater
+from eng_hindi import tatoeba_en_hi
 from utils import save_checkpoint, load_checkpoint, write_pred
 
 
@@ -15,7 +16,7 @@ __author__ = "__Girish_Hegde__"
 # =============================================================
 # Parameters
 # =============================================================
-EMB_DIM = 128
+EMB_DIM = 256
 HEADS = 8
 NUM_LAYERS = 3
 PRE_ATTN_ACT = None
@@ -23,17 +24,17 @@ POST_ATTN_ACT = None
 FFN_ATTN_ACT = nn.ReLU
 DROPOUT = 0.0
 
-LR = 1e-5
+LR = 1e-3
 BATCH_SIZE = 16
 EPOCHS = 100
 GRADIENT_CLIP = None  # 5
 
-LOGDIR = Path('./data/runs')
+LOGDIR = Path('./data/eng_hindi/runs')
 PRINT_FREQ = 100  # print info. frequency wrt iterations.
 SAVE_FREQ = 1  # checkpoint and log save frequency wrt epochs.
 
 DATAPATH = './data/tasks_train_simple.txt'
-LOAD = Path('./data/runs/best.pt')  # or None
+LOAD = LOGDIR/'best.pt'  # or None
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 LOGDIR.mkdir(parents=True, exist_ok=True)
@@ -42,14 +43,20 @@ LOGDIR.mkdir(parents=True, exist_ok=True)
 # =============================================================
 # Tokenization
 # =============================================================
-in_corpus, out_corpus, in_int2tk, out_int2tk = InOutTokenizer.run(
-    DATAPATH, in_token='IN:', out_token='OUT:',
-    start_token='<S>', end_token='<E>', pad_token='<P>', ukn_token='<U>',
-    lowercase=False,
-    out_json=LOGDIR/'tokens.json', encoding='utf-8',
-    verbose=True,
-)
+# in_corpus, out_corpus, in_int2tk, out_int2tk = InOutTokenizer.run(
+#     DATAPATH, in_token='IN:', out_token='OUT:',
+#     start_token='<S>', end_token='<E>', pad_token='<P>', ukn_token='<U>',
+#     lowercase=False,
+#     out_json=LOGDIR/'tokens.json', encoding='utf-8',
+#     verbose=True,
+# )
 
+in_corpus, out_corpus, in_int2tk, out_int2tk = tatoeba_en_hi(
+    split='train',
+    start_token='<S>', end_token='<E>',
+    pad_token='<P>', ukn_token='<U>',
+    out_json=LOGDIR/'tokens.json', verbose=True,
+)
 
 # =============================================================
 # Model init, Checkpoint loading, Dataset init

@@ -54,7 +54,7 @@ def tatoeba_en_hi(
 
     hi_sentences = [hi_tokenizer(data['translation']['hi']) for data in dataset][:-1]
     hi_sentences = [[start_token] + [str(tk) for tk in sentence] + [end_token] for sentence in hi_sentences]
-    hi_tokens = [tk for sentence in hi_sentences for tk in sentence] + [pad_token + ukn_token]
+    hi_tokens = [tk for sentence in hi_sentences for tk in sentence] + [pad_token, ukn_token]
     hi_tokens = np.unique(hi_tokens)
     hi_int2tk = dict(enumerate(hi_tokens))
     if verbose: print(f'Total hindi tokens = {len(hi_tokens)}')

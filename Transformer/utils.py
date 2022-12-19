@@ -74,6 +74,6 @@ def write_pred(input_, logits, in_int2tk, out_int2tk, filename, label=''):
     in_text = logits2text(input_, in_int2tk)
     out_text = logits2text(logits, out_int2tk)
     data = f'\n{"-"*100}\n{label}\n{"-"*100}\nIN: {in_text}\nOUT: {out_text}\n{"-"*100}'
-    with open(filename,'a' if Path(filename).is_file() else 'w') as fp:
+    with open(filename,'a' if Path(filename).is_file() else 'w', encoding="utf-8") as fp:
          fp.write(data)
     return in_text, out_text
