@@ -321,8 +321,46 @@ class Transformer(nn.Module):
         return y
 
     @torch.no_grad()
-    def generate(self, x):
-        return x
+    def generate(self, x, tgt_start_value, tgt_end_value, topk=1, y=None, max_size=100):
+        """ Sample test time output for given input
+            author: girish d. hegde
+
+        Args:
+            x (List[int]): [inp_seq_len, ] - input token encodings.
+            tgt_start_value (int): target tokens start token encoding value.
+            tgt_end_value (int): target tokens end token encoding value.
+            topk (int): k - topk sampling.
+            y (List[int]): [M, ] - output token encodings already known if any.
+            max_size (int): max tokens to generation limit.
+
+        Returns:
+            List[int]: [tgt_seq_len, ] - generate output encodings.
+        """
+        self.eval()
+        device = list(self.parameters())[0].device
+        x = torch.tensor([x], dtype=torch.int64, device=device)
+        x = self.inp_emb(x) + self.inp_pos_emb(x)
+        x = self.enc(x)
+        if y is None:
+            y = torch.tensor([tgt_start_value], dtype=torch.int64, device=device)
+        else:
+            y = torch.tensor(y, dtype=torch.int64, device=device)
+        n = len(y)
+        tk = y[-1].item()
+        output = []
+        while (n < max_size) and (tk != tgt_end_value):
+            n += 1
+            y_ = self.tgt_emb(y[None, :]) + self.tgt_pos_emb(y[None, :])
+            y_ = self.dec(y_, context=x)
+            y_ = self.to_logits(y_)
+            y_ = F.softmax(y_[0, -1, :], -1) # get last token prob.
+            y_, top_tk = torch.topk(y_, topk) # get top-k characters
+            # select the likely next token with some element of randomness
+            tk = (top_tk[torch.multinomial(y_/y_.sum(), 1)]).item() if topk > 1 else int(top_tk)
+            output.append(tk)
+            y = torch.cat((y, torch.tensor([tk], dtype=torch.int64, device=device)))
+        self.train()
+        return output
 
     def get_init_params(self, ):
         kwargs = {
