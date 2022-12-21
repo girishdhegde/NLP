@@ -2,6 +2,7 @@
 Refs:
     https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf
     https://github.com/lucidrains/x-transformers
+    https://nlp.seas.harvard.edu/2018/04/03/attention.html
     http://peterbloem.nl/blog/transformers
     https://jalammar.github.io/illustrated-transformer/
 """
@@ -143,9 +144,9 @@ class MHA(nn.Module):
             author: girish d. hegde
 
         Args:
-            q (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
-            k (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
-            v (torch.tensor): [bs, seq_len, emb_dim] - input tensor.
+            q (torch.tensor): [bs, seq_len, emb_dim] - query input tensor.
+            k (torch.tensor): [bs, seq_len, emb_dim] - key input tensor.
+            v (torch.tensor): [bs, seq_len, emb_dim] - value input tensor.
             mask (torch.tensor[bool]): [seq_len, seq_len] - boolean mask. attn[where mask is True] = -inf.
 
         Returns:
