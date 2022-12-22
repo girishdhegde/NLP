@@ -118,7 +118,7 @@ class Block(nn.Module):
 
 
 class GPT(nn.Module):
-    """ GPT
+    """ GPT2 model
         author: girish d. hegde
 
     Args:
@@ -155,6 +155,19 @@ class GPT(nn.Module):
         )
         self.transformer_ln = nn.LayerNorm(emb_dim)
         self.to_logits = nn.Linear(emb_dim, vocab_size)
+
+        self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, nn.LayerNorm):
+            torch.nn.init.zeros_(module.bias)
+            torch.nn.init.ones_(module.weight)
 
     def forward(self, x):
         """ GPT forward
@@ -194,9 +207,62 @@ class GPT(nn.Module):
         torch.save(ckpt, filename)
         return ckpt
 
+    @property()
+    def n_params(self):
+        total = sum(p.numel() for p in self.parameters())
+        logit_params = sum(p.numel() for p in self.to_logits.parameters())
+        return total - logit_params  # logit parameters are not considered
+
     @classmethod
     def create_from_ckpt(cls, filename):
         ckpt = torch.load(filename)
         net = cls(**ckpt['config'])
         net.load_state_dict(ckpt['state_dict'])
         return net
+
+    @classmethod
+    def from_pretrained(cls, model_type):
+        """
+        Initialize a pretrained GPT model by copying over the weights
+        from a huggingface/transformers checkpoint.
+        """
+        return
+
+    def get_optimizer(self, lr=2.5e-4, betas=(0.9, 0.999), weight_decay=0.01):
+        """ Function to get AdamW optimizer with no weight decays for certain params.
+            author: girish d. hegde
+
+        Refs:
+            https://github.com/karpathy/minGPT/blob/7218bcfa527c65f164de791099de715b81a95106/mingpt/model.py#L215
+            https://discuss.pytorch.org/t/weight-decay-only-for-weights-of-nn-linear-and-nn-conv/114348/6
+
+        Args:
+            lr (float): learning rate.
+            betas (tuple[float]): betas.
+            weight_decay (float): L2 regularization weight decay.
+
+        Returns:
+            torch.optim.AdamW : AdamW optimizer.
+        """
+        # separate weight decay and non weight decay parameters
+        whitelist_weight_modules = (torch.nn.Linear, )  # => blacklist = (torch.nn.LayerNorm, torch.nn.Embedding)
+        all_params = set(self.parameters())
+        decay = set()
+        for m in model.modules():
+            if isinstance(m, whitelist_weight_modules):
+                decay.add(m.weight)
+        no_decay = all_params - decays
+
+        # validate that all parameters are considered
+        inter_params = decay & no_decay
+        union_params = decay | no_decay
+        assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params), )
+        assert len(all_params - union_params) == 0, "parameters were not separated into either decay/no_decay set!"
+
+        # create the pytorch optimizer object
+        optim_groups = [
+            {"params": decay, "weight_decay": weight_decay},
+            {"params": no_decay, "weight_decay": 0.0},
+        ]
+        optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
+        return optimizer
