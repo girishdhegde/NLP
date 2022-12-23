@@ -45,7 +45,7 @@ class MHA(nn.Module):
         self.proj = nn.Linear(emb_dim, emb_dim, bias=bias)
 
         self.pre_act = pre_act or nn.Identity()
-        self.post_act = post_ac or nn.Identity()
+        self.post_act = post_act or nn.Identity()
         self.attn_dropout = nn.Dropout(attn_dropout) if attn_dropout is not None else nn.Identity()
         self.res_dropout = nn.Dropout(res_dropout) if res_dropout is not None else nn.Identity()
 
@@ -74,7 +74,7 @@ class MHA(nn.Module):
         if mask is not None:
             attn[..., mask] = -float('inf')
         attn = F.softmax(attn, dim=-1)
-        attn = self.dropout(attn)
+        attn = self.attn_dropout(attn)
 
         out = torch.bmm(attn, V)  # [bs*heads, seq_len, d]
         out = rearrange(out, '(b h) l d -> b l (h d)', h=self.heads)  # [bs, seq_len, emb_dim]
@@ -112,7 +112,7 @@ class Block(nn.Module):
     def forward(self, x):
         _, seq_len, _ = x.shape
         mask = torch.tril(torch.ones(seq_len, seq_len)) == 0
-        x = x + self.attn(self.pre_attn_ln(x), mask)
+        x = x + self.attn(self.pre_attn_ln(x), mask=mask)[0]
         x = x + self.ffn(self.pre_ffn_ln(x))
         return x
 
@@ -207,7 +207,7 @@ class GPT(nn.Module):
         torch.save(ckpt, filename)
         return ckpt
 
-    @property()
+    @property
     def n_params(self):
         total = sum(p.numel() for p in self.parameters())
         logit_params = sum(p.numel() for p in self.to_logits.parameters())
@@ -248,10 +248,10 @@ class GPT(nn.Module):
         whitelist_weight_modules = (torch.nn.Linear, )  # => blacklist = (torch.nn.LayerNorm, torch.nn.Embedding)
         all_params = set(self.parameters())
         decay = set()
-        for m in model.modules():
+        for m in self.modules():
             if isinstance(m, whitelist_weight_modules):
                 decay.add(m.weight)
-        no_decay = all_params - decays
+        no_decay = all_params - decay
 
         # validate that all parameters are considered
         inter_params = decay & no_decay
@@ -261,8 +261,8 @@ class GPT(nn.Module):
 
         # create the pytorch optimizer object
         optim_groups = [
-            {"params": decay, "weight_decay": weight_decay},
-            {"params": no_decay, "weight_decay": 0.0},
+            {"params": list(decay), "weight_decay": weight_decay},
+            {"params": list(no_decay), "weight_decay": 0.0},
         ]
         optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
         return optimizer
