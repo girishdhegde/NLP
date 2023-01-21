@@ -14,56 +14,58 @@ __author__ = "__Girish_Hegde__"
 
 
 class TiktokenTokenizer:
-    """ input output sentence word level tokenization
+    """ open-ai gpt2 bpe tokenizer based custom Text corpus tokenizer.
         author: girish d. hegde
 
-    text data corpus format:
-        filename.txt
-            <in_token> input sentence 1. <out_token> output sentence 1.
-            <in_token> input sentence 2. <out_token> output sentence 2.
-            ...
-            ...
-            <in_token> input sentence n. <out_token> output sentence n.
+        text dataset pickle file structure:
+            dataset.pkl
+                [
+                    "paragraph 1 - string of words",
+                    "paragraph 2",
+                    ...
+                    "paragraph n",
+                ]
+
+    Args:
+        cache_dir (str/Path): directory to/from write/read cache.
+        dataset (str/Path): path to dataset pickle file.
+        verbose (bool): print processing progress/info.
 
     Refs:
-        https://github.com/brendenlake/SCAN
-        https://towardsdatascience.com/dynamic-word-tokenization-with-regex-tokenizer-801ae839d1cd
+        https://github.com/openai/tiktoken
     """
-    def __init__(self, ):
+    def __init__(self, cache_dir, dataset=None, verbose=False):
         self.tokenizer = tiktoken.get_encoding("gpt2")
+        if dataset is not None:
+            self.run(cache_dir, dataset, verbose)
+        else:
+            self.read_cache(cache_dir, load_dataset=False)
 
-    def read(self, filename):
-        """ Fuction to read pickle file containing text.
+    @classmethod
+    def read_dataset(cls, filename):
+        """ Fuction to read pickle file containing dataset.
             author: girish d. hegde
 
         Args:
-            filename (Path): path to .txt file.
+            filename (str/Path): path to dataset pickel file.
 
         Returns:
-            str: corpus of text
+            list[str]/list[int]: dataset - dataset of string text or encoded dataset.
         """
         with open(filename, 'rb') as fp:
-            corpus = pickle.load(fp)
-        return corpus
+            dataset = pickle.load(fp)
+        return dataset
 
     def tokenize(self, dataset, verbose=False):
-        """ Fucntion to tokenize corpus of text to input output sentence tokens/words.
+        """ Fucntion to tokenize dataset of text to tokens and to update token lookups.
             author: girish d. hegde
 
         Args:
-            corpus (str/generator): text corpus.
-            in_token (str): token representing input sentence.
-            out_token (str): token representing output sentence.
-            start_token (str): start of sentence indication token.
-            end_token (str): end of sentence indication token.
-            lowercase (bool): convert all tokens to lowercase.
+            dataset (list[str]): list of strings/text.
+            verbose (bool): print progress/info.
 
         Returns:
-            str: corpus with special characters space padded.
-            list[list[str]]: [list of input tokens/words of sentence for sentence in corpus].
-            list[list[str]]: [list of output tokens/words of sentence for sentence in corpus].
-            list[str]: unique input tokens.
-            list[str]: unique output tokens.
+            list[list[int]]: tokenized_dataset - [list of encoded tokens for sample in dataset].
         """
         self.int2tiktoken = set()
         tokenized_dataset = []
@@ -83,13 +85,19 @@ class TiktokenTokenizer:
 
         return tokenized_dataset
 
-    def write_cache(self, directory, dataset=None, tokenized=True, verbose=False):
-        """ Functiont to write integer, tiktokens lookups and encoded dataset into pickle files.
+    def write_cache(self, directory, dataset=None, verbose=False):
+        """ Functiont to write token lookups and encoded dataset into pickle files.
             author: girish d. hegde
 
         Args:
-            directory (Path/str): path to output directory.
+            directory (Path/str): path to cache directory.
+            dataset (list[str]/list[list[int]]): list[str] dataset or list[list[int]] encoded tokenized dataset.
+            verbose (bool): print progress/info.
+
+        Returns:
+            list[int]: dataset - encoded text dataset.
         """
+        tokenized = not isinstance(dataset[0], str)
         if dataset is not None:
             if verbose: print('tokenizing dataset ... ')
             temp = []
@@ -119,16 +127,17 @@ class TiktokenTokenizer:
             directory (Path/str): path to tokenizer cache directory.
 
         Returns:
-            dict[int:str]: in_int2tk - integer to token lookup of input sentences.
-            dict[int:str]: in_int2tk - integer to token lookup of output sentences.
+            np.ndarray[int]: int2tiktoken - encodings to tiktoken encodings table.
+            np.ndarray[int]: tiktoken2int - tiktoken encodings to encodings table.
+            list[str]/list[int]/None: dataset of list of strings or encoded dataset or None.
         """
         directory = Path(directory)
         dataset = None
         if load_dataset and (directory/'dataset.pkl').is_file():
             with open(directory/'dataset.pkl', 'rb') as fp: dataset = pickle.load(fp)
-        with open(directory/'int2tiktoken.pkl', 'rb') as fp: int2tiktoken = pickle.load(fp)
-        with open(directory/'tiktoken2int.pkl', 'rb') as fp: tiktoken2int = pickle.load(fp)
-        return int2tiktoken, tiktoken2int, dataset
+        with open(directory/'int2tiktoken.pkl', 'rb') as fp: self.int2tiktoken = pickle.load(fp)
+        with open(directory/'tiktoken2int.pkl', 'rb') as fp: self.tiktoken2int = pickle.load(fp)
+        return self.int2tiktoken, self.tiktoken2int, dataset
 
     def run(self, directory, dataset, verbose=False):
         """ Function run tokenization pipeline on text dataset file.
@@ -142,11 +151,11 @@ class TiktokenTokenizer:
             verbose (bool): print info.
 
         Returns:
-            np.ndarray[int]: dataset - encoded tokenized dataset.
+            list[int]: dataset - encoded tokenized dataset.
         """
-        dataset = self.read(dataset, encoding)
+        dataset = self.read_dataset(dataset)
         dataset = self.tokenize(dataset, verbose)
-        dataset = self.write_cache(directory, dataset, True, verbose)
+        dataset = self.write_cache(directory, dataset, verbose)
         return dataset
 
     def encode(self, text):
@@ -159,7 +168,7 @@ class TiktokenTokenizer:
         Returns:
             np.ndarray[int]: tokens - list encoded text.
         """
-        tokens = self.tokenizer(text)
+        tokens = self.tokenizer.encode(text)
         tokens = self.tiktoken2int[tokens]
         return tokens
 
@@ -176,3 +185,12 @@ class TiktokenTokenizer:
         tokens = self.int2tiktoken[tokens]
         text = self.tokenizer.decode(tokens)
         return text
+
+
+# TODO:
+# add special task tokens
+# prepare wikitext.py
+# prepare codeparrot.py
+# pretrain dataloader
+# finetune dataloader
+# collate functions
