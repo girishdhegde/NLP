@@ -31,7 +31,7 @@ class TiktokenTokenizer:
     """
     def __init__(self):
         self.tokenizer = tiktoken.get_encoding("gpt2")
-        self.vocab_size = self.tokenizer.max_token_value
+        self.vocab_size = self.tokenizer.max_token_value + 1
 
     @classmethod
     def read_dataset(cls, filename):
@@ -116,8 +116,6 @@ class TiktokenTokenizer:
 
 # TODO:
 # add special task tokens
-# prepare wikitext.py
-# prepare codeparrot.py
 # pretrain dataloader
 # finetune dataloader
 # collate functions
