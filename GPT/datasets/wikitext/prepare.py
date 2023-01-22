@@ -14,7 +14,7 @@ from datasets import load_dataset
 __author__ = "__Girish_Hegde__"
 
 
-split = 'train'
+split = 'train'  # or 'test'
 outdir = '../../data/'
 
 wikitext = load_dataset("wikitext", 'wikitext-2-v1')
