@@ -6,6 +6,7 @@ import pickle
 
 import numpy as np
 import tiktoken  # openai gpt2 bpe tokenizer
+from tiktoken.load import data_gym_to_mergeable_bpe_ranks
 import torch
 from torch.utils.data import Dataset
 
@@ -13,8 +14,8 @@ from torch.utils.data import Dataset
 __author__ = "__Girish_Hegde__"
 
 
-class TiktokenTokenizer:
-    """ open-ai gpt2 bpe tokenizer based custom Text corpus tokenizer.
+class BPETokenizer(tiktoken.core.Encoding):
+    """ open-ai gpt2 bpe tokenizer.
         author: girish d. hegde
 
         text dataset pickle file structure:
@@ -26,12 +27,30 @@ class TiktokenTokenizer:
                     "paragraph n",
                 ]
 
+    Args:
+        n_tasks (int): add task special tokens - ['<|task|>' for task in range(n_tasks)].
+
     Refs:
         https://github.com/openai/tiktoken
+        https://github.com/openai/tiktoken/issues/9
     """
-    def __init__(self):
-        self.tokenizer = tiktoken.get_encoding("gpt2")
-        self.vocab_size = self.tokenizer.max_token_value + 1
+    def __init__(self, n_tasks=0):
+        sp_tkns = {"<|endoftext|>": 50256}
+        for i in range(n_tasks):
+            sp_tkns[f"<|{i + 1}|>"] = 50257 + i
+        mergeable_ranks = data_gym_to_mergeable_bpe_ranks(
+            vocab_bpe_file="az://openaipublic/gpt-2/encodings/main/vocab.bpe",
+            encoder_json_file="az://openaipublic/gpt-2/encodings/main/encoder.json",
+        )
+        kwargs = {
+            "name": "gpt2",
+            "explicit_n_vocab": 50257 + n_tasks,
+            "pat_str": r"""'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""",
+            "mergeable_ranks": mergeable_ranks,
+            "special_tokens": sp_tkns,
+        }
+        super().__init__(**kwargs)
+        self.n_tasks = n_tasks
 
     @classmethod
     def read_dataset(cls, filename):
@@ -68,12 +87,12 @@ class TiktokenTokenizer:
         ntokens = 0
         for example in dataset:
             if example:
-                tokens = self.tokenizer.encode(example)
+                tokens = self.encode(example)
                 tokens = torch.tensor(tokens, dtype=torch.int64) if to_torch else tokens
                 tokenized_dataset.append(tokens)
                 ntokens += len(tokens)
 
-        if verbose: print(f'vocab size = {self.vocab_size}')
+        if verbose: print(f'vocab size = {self.n_vocab}')
         if verbose: print(f'total tokens in dataset = {ntokens/1e6}M')
 
         if cache_dir is not None:
@@ -95,7 +114,7 @@ class TiktokenTokenizer:
         Returns:
             np.ndarray[int]: tokens - list encoded text.
         """
-        tokens = self.tokenizer.encode(text)
+        tokens = super().encode(text, allowed_special='all')
         return tokens
 
     def decode(self, tokens):
@@ -110,12 +129,11 @@ class TiktokenTokenizer:
         """
         if isinstance(tokens, torch.Tensor):
             tokens = tokens.tolist()
-        text = self.tokenizer.decode(tokens)
+        text = super().decode(tokens)
         return text
 
 
 # TODO:
-# add special task tokens
 # pretrain dataloader
 # finetune dataloader
 # collate functions
