@@ -13,7 +13,7 @@ def save_checkpoint(
     ):
     ckpt = {
         'net':{
-            'kwargs':net.get_init_params(),
+            'config':net.get_config(),
             'state_dict':net.state_dict(),
         },
         'training':{
