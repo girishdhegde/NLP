@@ -1,4 +1,5 @@
 from pathlib import Path
+import random
 
 import numpy as np
 import torch
@@ -6,6 +7,13 @@ import torch.nn.functional as F
 
 
 __author__ = "__Girish_Hegde__"
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 
 def save_checkpoint(
