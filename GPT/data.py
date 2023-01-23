@@ -133,7 +133,36 @@ class BPETokenizer(tiktoken.core.Encoding):
         return text
 
 
+class PretrainSet(Dataset):
+    """ Pytorch Dataset class for text corpus pretraining of GPT.
+        author: girish d. hegde
+
+    Args:
+        dataset (torch.LongTensor/list[list[int]]): Encoded tokenized dataset.
+        block_size (int): sequence length.
+    """
+    def __init__(self, dataset, block_size=512):
+        super().__init__()
+        self.block_size = block_size
+        if not isinstance(dataset, torch.Tensor):
+            self.dataset = torch.hstack([torch.tensor(data, dtype=torch.int64) for data in dataset])
+        else:
+            self.dataset = dataset
+        self.len = len(self.dataset) - (block_size + 1)
+
+    def __len__(self):
+        return self.len
+
+    def __getitem__(self, index):
+        """
+        Returns:
+            torch.LongTensor: [block_size, ] - input tokens encoding.
+            torch.LongTensor: [block_size, ] - ouput tokens encoding.
+        """
+        start = random.randint(0, self.len)
+        end = start + self.block_size
+        return self.dataset[start:end], self.dataset[start + 1:end + 1]
+
+
 # TODO:
-# pretrain dataloader
-# finetune dataloader
-# collate functions
+# finetune dataloader and collate functions if required
