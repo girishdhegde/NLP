@@ -118,19 +118,22 @@ def get_lr(iter):
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
     return MIN_LR + coeff * (LR - MIN_LR)
 
-# # =============================================================
-# # Training loop - forward, backward, optimize
-# # =============================================================
+# =============================================================
+# Training loop - forward, backward, loss, optimize
+# =============================================================
 trainloss, evalloss, log_trainloss = 0, 0, 0
 trainloader, evalloader = iter(trainloader), iter(evalloader)
 net.train()
 for itr in range(itr, MAX_ITERS):
+    # cosine scheduler with warmup learning rate decay
     if DECAY_LR:
         lr = get_lr(itr)
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     optimizer.zero_grad()
 
+    # forward, loss, backward with grad. accumulation
+    loss_ = 0
     for step in range(GRAD_ACC_STEPS):
         inp, tar = next(trainloader)
         inp, tar = inp.to(DEVICE), tar.to(DEVICE)
@@ -139,20 +142,24 @@ for itr in range(itr, MAX_ITERS):
         loss = criterion(logits.reshape(-1, tokenizer.n_vocab), tar.reshape(-1))
         loss.backward()
 
-        loss_ = loss.item()
-        trainloss += loss_
-        log_trainloss += loss_
+        loss_ += loss.item()
 
+    # optimize params
+    loss_ = loss_/GRAD_ACC_STEPS
+    trainloss += loss_
+    log_trainloss += loss_
     if GRADIENT_CLIP is not None:
         nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
     optimizer.step()
 
+    # print info.
     if itr%PRINT_INTERVAL == 0:
         log_data = f"iteration: {itr}/{MAX_ITERS}, \ttrain loss: {log_trainloss/PRINT_INTERVAL}"
         print(log_data)
         log_trainloss = 0
 
     # if itr%EVAL_INTERVAL == 0:
+    #     net.eval()
     #     trainloss = trainloss/EVAL_INTERVAL
     #     if trainloss < best:
     #         best = trainloss
@@ -171,3 +178,8 @@ for itr in range(itr, MAX_ITERS):
     #     with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
     #         fp.write(log_data + '\n')
     #     trainloss = 0
+    #     net.train()
+
+# =============================================================
+# END
+# =============================================================
