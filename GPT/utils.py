@@ -37,7 +37,7 @@ def save_checkpoint(
 
 
 def load_checkpoint(filename):
-    itr, best = 0, float('inf')
+    itr, best = 1, float('inf')
     net_state, optim_state, kwargs = None, None, None
     if filename is not None:
         if Path(filename).is_file():
@@ -51,7 +51,7 @@ def load_checkpoint(filename):
             if 'kwargs' in ckpt:
                 kwargs = ckpt['kwargs']
                 print('Additional kwargs loaded successfully ...')
-    return net_State, optim_state, itr, best, kwargs
+    return net_state, optim_state, itr, best, kwargs
 
 
 # @torch.no_grad()
