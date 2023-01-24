@@ -17,15 +17,18 @@ def set_seed(seed):
 
 
 def save_checkpoint(
-        net, epoch, loss, best, filename, **kwargs,
+        net, optim, itr, loss, best, filename, **kwargs,
     ):
     ckpt = {
         'net':{
             'config':net.get_config(),
             'state_dict':net.state_dict(),
         },
+        'optimizer':{
+            'state_dict':optim.state_dict(),
+        },
         'training':{
-            'epoch':epoch, 'loss':loss, 'best':best,
+            'iteration':itr, 'loss':loss, 'best':best,
         },
         'kwargs':kwargs,
     }
@@ -33,21 +36,22 @@ def save_checkpoint(
     return ckpt
 
 
-def load_checkpoint(filename, net, device='cpu'):
-    epoch, best = 0, float('inf')
-    kwargs = None
+def load_checkpoint(filename):
+    itr, best = 0, float('inf')
+    net_state, optim_state, kwargs = None, None, None
     if filename is not None:
         if Path(filename).is_file():
-            ckpt = torch.load(filename, map_location=device)
-            net.load_state_dict(ckpt['net']['state_dict'])
+            ckpt = torch.load(filename, map_location='cpu')
+            net_state = ckpt['net']['state_dict']
+            optim_state = ckpt['optimizer']['state_dict']
             print('Checkpoint loaded successfully ...')
             if 'training' in ckpt:
-                epoch, loss, best = ckpt['training'].values()
+                itr, loss, best = ckpt['training'].values()
                 print('Training parameters loaded successfully ...')
             if 'kwargs' in ckpt:
                 kwargs = ckpt['kwargs']
                 print('Additional kwargs loaded successfully ...')
-    return net, epoch, best, kwargs
+    return net_State, optim_state, itr, best, kwargs
 
 
 # @torch.no_grad()
