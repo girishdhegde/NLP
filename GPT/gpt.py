@@ -32,7 +32,7 @@ class MHA(nn.Module):
         attn_dropout (float): attention dropout probability.
         res_dropout (float): residual dropout probability (applied after last projection).
     """
-    def __init__(self, emb_dim, heads=1, bias=True, pre_act=None, post_act=None, attn_dropout=None, res_dropout=None):
+    def __init__(self, emb_dim, heads=1, bias=False, pre_act=None, post_act=None, attn_dropout=None, res_dropout=None):
         super().__init__()
         self.emb_dim = emb_dim
         self.heads = heads

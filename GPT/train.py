@@ -1,4 +1,5 @@
 import math
+import time
 from pathlib import Path
 
 import torch
@@ -22,7 +23,6 @@ __author__ = "__Girish_Hegde__"
 EMB_DIM = 256
 HEADS = 8
 NUM_LAYERS = 12
-VOCAB_SIZE = 50_256
 CONTEXT = 512
 DROPOUT = 0.0  # for pretraining 0 is good, for finetuning try 0.1+
 # logging
@@ -32,15 +32,16 @@ PRINT_INTERVAL = 10
 # dataset
 DATASET = './data/wikitext_train.pkl'
 CACHE_DIR = './data/cache/wikitext_train'
-EVALSET = './data/wikitext_train.pkl'
-EVAL_CACHE_DIR = './data/cache/wikitext_train'
+EVALSET = './data/wikitext_test.pkl'
+EVAL_CACHE_DIR = './data/cache/wikitext_test'
+N_TASKS = 10
 # training
 BATCH_SIZE = 3
 GRAD_ACC_STEPS = 6  # used to simulate larger batch sizes
-MAX_ITERS = 600000  # total number of training iterations
+MAX_ITERS = 100_000  # total number of training iterations
 # EVAL_INTERVAL = 2000
-EVAL_INTERVAL = 20
-EVAL_ITERS = 20
+EVAL_INTERVAL = 500
+EVAL_ITERS = 100
 EVAL_ONLY = False  # if True, script exits right after the first eval
 GRADIENT_CLIP = None  # 5
 # adamw optimizer
@@ -51,8 +52,8 @@ BETA2 = 0.95
 # learning rate decay settings
 DECAY_LR = True  # whether to decay the learning rate
 WARMUP_ITERS = 2000  # how many steps to warm up for
-LR_DECAY_ITERS = 600000  # should be ~= max_iters per Chinchilla
-MIN_LR = 6e-5  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
+LR_DECAY_ITERS = MAX_ITERS  # should be ~= max_iters per Chinchilla
+MIN_LR = LR/10  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 # system
 # dtype = 'bfloat16' # 'float32' or 'bfloat16'
 # compile = True # use PyTorch 2.0 to compile the model to be faster
@@ -67,7 +68,7 @@ torch.backends.cudnn.benchmark = True  # optimize backend algorithms
 # =============================================================
 # Tokenizer, Dataset, Dataloader init
 # =============================================================
-tokenizer = BPETokenizer(n_tasks=10)
+tokenizer = BPETokenizer(n_tasks=N_TASKS)
 if (Path(CACHE_DIR)/'dataset.pkl').is_file():
     trainset = tokenizer.read_dataset((Path(CACHE_DIR)/'dataset.pkl'))
 else:
@@ -80,8 +81,8 @@ else:
 trainset = PretrainSet(trainset, CONTEXT)
 evalset = PretrainSet(evalset, CONTEXT)
 print(f'Total training samples = {len(trainset)}')
-trainset.len = MAX_ITERS*GRAD_ACC_STEPS
-evalset.len = EVAL_ITERS
+trainset.len = MAX_ITERS*BATCH_SIZE*GRAD_ACC_STEPS
+evalset.len = EVAL_ITERS*BATCH_SIZE
 trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False)
 evalloader = DataLoader(evalset, batch_size=BATCH_SIZE, shuffle=False)
 
@@ -128,7 +129,11 @@ def get_lr(iter):
 trainloss, valloss, log_trainloss = 0, 0, 0
 trainloader = iter(trainloader)
 net.train()
+optimizer.zero_grad(set_to_none=True)
+# set_to_none -> instead of filling grad with zero tensor set it to None
+# reduce memory consumptionn + increases speed
 print('Training ...')
+start_time = time.perf_counter()
 for itr in range(itr, MAX_ITERS):
     # =============================================================
     # Validation
@@ -146,41 +151,37 @@ for itr in range(itr, MAX_ITERS):
         net.train()
 
         valloss = valloss/EVAL_ITERS
-        trainloss = trainloss/EVAL_ITERS
+        trainloss = trainloss/EVAL_INTERVAL
 
         print('Saving checkpoint ...')
         save_checkpoint(
-            net, optimizer, itr, valloss, trainloss, best, LOGDIR/'ckpt.pt',
+            net, optimizer, itr, valloss, trainloss, best, LOGDIR/'ckpt.pt', n_tasks=N_TASKS,
         )
 
         if valloss < best:
             best = valloss
             save_checkpoint(
-                net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt',
+                net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt', n_tasks=N_TASKS,
             )
 
         write_pred(inp[0], logits[0], tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
 
         logfile = LOGDIR/'log.txt'
         log_data = f"iteration: {itr}/{MAX_ITERS}, \tval loss: {valloss}, \ttrain loss: {trainloss}, best loss: {best}"
-        print(f'{"-"*100}\n{log_data}\n{"-"*100}')
         with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
             fp.write(log_data + '\n')
+        end_time = time.perf_counter()
+        log_data = f'{log_data}, \t time: {(end_time - start_time)/60}M'
+        print(f'{"-"*150}\n{log_data}\n{"-"*150}')
 
         trainloss = 0
+        start_time = time.perf_counter()
         if EVAL_ONLY: break
         print('Training ...')
 
     # =============================================================
     # Training
     # =============================================================
-    # cosine scheduler with warmup learning rate decay
-    if DECAY_LR:
-        lr = get_lr(itr)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
-    optimizer.zero_grad()
-
     # forward, loss, backward with grad. accumulation
     loss_ = 0
     for step in range(GRAD_ACC_STEPS):
@@ -199,7 +200,14 @@ for itr in range(itr, MAX_ITERS):
     log_trainloss += loss_
     if GRADIENT_CLIP is not None:
         nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
+
+    # cosine scheduler with warmup learning rate decay
+    if DECAY_LR:
+        lr = get_lr(itr)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
     optimizer.step()
+    optimizer.zero_grad(set_to_none=True)
 
     # print info.
     if itr%PRINT_INTERVAL == 0:
