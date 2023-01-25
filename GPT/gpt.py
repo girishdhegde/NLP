@@ -32,7 +32,7 @@ class MHA(nn.Module):
         attn_dropout (float): attention dropout probability.
         res_dropout (float): residual dropout probability (applied after last projection).
     """
-    def __init__(self, emb_dim, heads=1, bias=False, pre_act=None, post_act=None, attn_dropout=None, res_dropout=None):
+    def __init__(self, emb_dim, heads=1, bias=True, pre_act=None, post_act=None, attn_dropout=None, res_dropout=None):
         super().__init__()
         self.emb_dim = emb_dim
         self.heads = heads
@@ -154,7 +154,10 @@ class GPT(nn.Module):
             *[Block(emb_dim, heads, attn_dropout, res_dropout) for _ in range(num_layers)]
         )
         self.transformer_ln = nn.LayerNorm(emb_dim)
-        self.to_logits = nn.Linear(emb_dim, vocab_size)
+        self.to_logits = nn.Linear(emb_dim, vocab_size, bias=False)
+
+        # weight tying: https://github.com/karpathy/nanoGPT/blob/e0c689cf38478eea9416757cec5f834620983862/model.py#L122
+        self.emb.weight = self.to_logits.weight # https://paperswithcode.com/method/weight-tying
 
         self.apply(self._init_weights)
 
@@ -210,8 +213,8 @@ class GPT(nn.Module):
     @property
     def n_params(self):
         total = sum(p.numel() for p in self.parameters())
-        logit_params = sum(p.numel() for p in self.to_logits.parameters())
-        return total - logit_params  # logit parameters are not considered
+        # logit_params = sum(p.numel() for p in self.to_logits.parameters())
+        return total
 
     @classmethod
     def create_from_ckpt(cls, filename):
@@ -230,6 +233,7 @@ class GPT(nn.Module):
 
     def get_optimizer(self, lr=2.5e-4, betas=(0.9, 0.999), weight_decay=0.01):
         """ Function to get AdamW optimizer with no weight decays for certain params.
+            (no_decays -> bias, layernorm, embedding layers weights)
             author: girish d. hegde
 
         Refs:
@@ -245,24 +249,32 @@ class GPT(nn.Module):
             torch.optim.AdamW : AdamW optimizer.
         """
         # separate weight decay and non weight decay parameters
-        whitelist_weight_modules = (torch.nn.Linear, )  # => blacklist = (torch.nn.LayerNorm, torch.nn.Embedding)
-        all_params = set(self.parameters())
-        decay = set()
-        for m in self.modules():
-            if isinstance(m, whitelist_weight_modules):
-                decay.add(m.weight)
-        no_decay = all_params - decay
+        blacklist = ('bias', 'ln', 'emb')  # => blacklist = (torch.nn.LayerNorm, torch.nn.Embedding)
+        decay, no_decay = [], []
+        for name, param in self.named_parameters():
+            decayable = True
+            for blk_str in blacklist:
+                if blk_str in name:
+                    no_decay.append(param)
+                    decayable = False
+                    break
+            if decayable:
+                decay.append(param)
 
         # validate that all parameters are considered
-        inter_params = decay & no_decay
-        union_params = decay | no_decay
+        all_params = set(self.parameters())
+        set_decay, set_no_decay = set(decay), set(no_decay)
+        inter_params = set_decay & set_no_decay
+        union_params = set_decay | set_no_decay
+        assert len(decay) == len(set_decay), "duplicates found in decay params"
+        assert len(no_decay) == len(set_no_decay), "duplicates found in no decay params"
         assert len(inter_params) == 0, "parameters %s made it into both decay/no_decay sets!" % (str(inter_params), )
         assert len(all_params - union_params) == 0, "parameters were not separated into either decay/no_decay set!"
 
         # create the pytorch optimizer object
         optim_groups = [
-            {"params": list(decay), "weight_decay": weight_decay},
-            {"params": list(no_decay), "weight_decay": 0.0},
+            {"params": decay, "weight_decay": weight_decay},
+            {"params": no_decay, "weight_decay": 0.0},
         ]
         optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
         return optimizer

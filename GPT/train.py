@@ -39,7 +39,7 @@ BATCH_SIZE = 3
 GRAD_ACC_STEPS = 6  # used to simulate larger batch sizes
 MAX_ITERS = 600000  # total number of training iterations
 # EVAL_INTERVAL = 2000
-EVAL_INTERVAL = 100
+EVAL_INTERVAL = 20
 EVAL_ITERS = 20
 EVAL_ONLY = False  # if True, script exits right after the first eval
 GRADIENT_CLIP = None  # 5
@@ -93,13 +93,14 @@ net = GPT(
     tokenizer.n_vocab, CONTEXT,
     DROPOUT, DROPOUT, DROPOUT,
 )
-optimizer = net.get_optimizer(lr=LR, betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY)
 net_state, optim_state, itr, best, kwargs = load_checkpoint(LOAD)
-criterion = nn.CrossEntropyLoss()
 if net_state is not None:
     net.load_state_dict(net_state)
-    optimizer.load_state_dict(optim_state)
 net.to(DEVICE)
+optimizer = net.get_optimizer(lr=LR, betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY)
+if optim_state is not None:
+    optimizer.load_state_dict(optim_state)
+criterion = nn.CrossEntropyLoss()
 print(f'Total model parameters = {net.n_params} = {net.n_params/1e6}M')
 
 # =============================================================
@@ -124,7 +125,7 @@ def get_lr(iter):
 # =============================================================
 # Training loop - forward, backward, loss, optimize
 # =============================================================
-trainloss, valloss, log_trainloss, train_steps = 0, 0, 0, 1
+trainloss, valloss, log_trainloss = 0, 0, 0
 trainloader = iter(trainloader)
 net.train()
 print('Training ...')
@@ -145,11 +146,9 @@ for itr in range(itr, MAX_ITERS):
         net.train()
 
         valloss = valloss/EVAL_ITERS
-        trainloss = trainloss/train_steps
+        trainloss = trainloss/EVAL_ITERS
 
         print('Saving checkpoint ...')
-        with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
-            fp.write(log_data + '\n')
         save_checkpoint(
             net, optimizer, itr, valloss, trainloss, best, LOGDIR/'ckpt.pt',
         )
@@ -165,8 +164,10 @@ for itr in range(itr, MAX_ITERS):
         logfile = LOGDIR/'log.txt'
         log_data = f"iteration: {itr}/{MAX_ITERS}, \tval loss: {valloss}, \ttrain loss: {trainloss}, best loss: {best}"
         print(f'{"-"*100}\n{log_data}\n{"-"*100}')
+        with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
+            fp.write(log_data + '\n')
 
-        trainloss, train_steps = 0, 1
+        trainloss = 0
         if EVAL_ONLY: break
         print('Training ...')
 
@@ -196,7 +197,6 @@ for itr in range(itr, MAX_ITERS):
     loss_ = loss_/GRAD_ACC_STEPS
     trainloss += loss_
     log_trainloss += loss_
-    train_steps += 1
     if GRADIENT_CLIP is not None:
         nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
     optimizer.step()
@@ -210,3 +210,6 @@ for itr in range(itr, MAX_ITERS):
 # =============================================================
 # END
 # =============================================================
+
+# TODO:
+# AMP

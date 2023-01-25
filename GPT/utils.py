@@ -44,7 +44,7 @@ def load_checkpoint(filename):
             ckpt = torch.load(filename, map_location='cpu')
             net_state = ckpt['net']['state_dict']
             optim_state = ckpt['optimizer']['state_dict']
-            print('Checkpoint loaded successfully ...')
+            print('Model & Optim state dicts loaded successfully ...')
             if 'training' in ckpt:
                 itr, val_loss, train_loss, best = ckpt['training'].values()
                 print('Training parameters loaded successfully ...')
@@ -70,14 +70,14 @@ def logits2text(logits, tokenizer, ):
         positions = torch.argmax(logits.detach().cpu(), dim=-1)
     else:
         positions = logits.detach().cpu().type(torch.int64)
-    words = tokenizer.decode(positions)
-    return ' '.join(words)
+    text = tokenizer.decode(positions)
+    return text
 
 
 def write_pred(input_, logits, tokenizer, filename, label=''):
     in_text = logits2text(input_, tokenizer)
     out_text = logits2text(logits, tokenizer)
-    data = f'\n{"-"*100}\n{label}\n{"-"*100}\nIN: {in_text}\nOUT: {out_text}\n{"-"*100}'
+    data = f'\n{"-"*100}\n{label}\n{"-"*100}\n<INPUT>\n: {in_text}\n<PREDICTION>\n: {out_text}\n{"-"*100}'
     with open(filename,'a' if Path(filename).is_file() else 'w', encoding="utf-8") as fp:
          fp.write(data)
     return in_text, out_text
