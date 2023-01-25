@@ -167,7 +167,7 @@ for itr in range(itr, MAX_ITERS):
         write_pred(inp[0], logits[0], tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
 
         logfile = LOGDIR/'log.txt'
-        log_data = f"iteration: {itr}/{MAX_ITERS}, \tval loss: {valloss}, \ttrain loss: {trainloss}, best loss: {best}"
+        log_data = f"iteration: {itr}/{MAX_ITERS}, \tval loss: {valloss}, \ttrain loss: {trainloss}, \tbest loss: {best}"
         with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
             fp.write(log_data + '\n')
         end_time = time.perf_counter()
