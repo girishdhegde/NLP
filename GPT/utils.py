@@ -17,7 +17,7 @@ def set_seed(seed):
 
 
 def save_checkpoint(
-        net, optim, itr, loss, best, filename, **kwargs,
+        net, optim, itr, val_loss, train_loss, best, filename, **kwargs,
     ):
     ckpt = {
         'net':{
@@ -28,7 +28,7 @@ def save_checkpoint(
             'state_dict':optim.state_dict(),
         },
         'training':{
-            'iteration':itr, 'loss':loss, 'best':best,
+            'iteration':itr, 'val_loss':val_loss, 'train_loss':train_loss, 'best':best,
         },
         'kwargs':kwargs,
     }
@@ -46,7 +46,7 @@ def load_checkpoint(filename):
             optim_state = ckpt['optimizer']['state_dict']
             print('Checkpoint loaded successfully ...')
             if 'training' in ckpt:
-                itr, loss, best = ckpt['training'].values()
+                itr, val_loss, train_loss, best = ckpt['training'].values()
                 print('Training parameters loaded successfully ...')
             if 'kwargs' in ckpt:
                 kwargs = ckpt['kwargs']
@@ -54,33 +54,34 @@ def load_checkpoint(filename):
     return net_state, optim_state, itr, best, kwargs
 
 
-# @torch.no_grad()
-# def logits2text(logits, int2token, ):
-#     """ Function to convert model prediction logits into words.
-#         author: girish d. hegde
+@torch.no_grad()
+def logits2text(logits, tokenizer, ):
+    """ Function to convert model prediction logits into words.
+        author: girish d. hegde
 
-#     Args:
-#         logits (torch.tensor[float]): [seq_len, vocab_size] - logits or [seq_len, ] - positions.
-#         int2token (dict[int:str]): [vocab_size, ] - int to token lookup.
+    Args:
+        logits (torch.tensor[float]): [seq_len, vocab_size] - logits or [seq_len, ] - positions.
+        tokenizer (BPETokenizer): BPETokenizer.
 
-#     Returns:
-#         str: output string(set of words).
-#     """
-#     if logits.ndimension() == 2:
-#         positions = torch.argmax(logits.detach().cpu(), dim=-1)
-#     else:
-#         positions = logits.detach().cpu().type(torch.int32)
-#     words = [int2token[p.item()] for p in positions]
-#     return ' '.join(words)
+    Returns:
+        str: output string(set of words).
+    """
+    if logits.ndimension() == 2:
+        positions = torch.argmax(logits.detach().cpu(), dim=-1)
+    else:
+        positions = logits.detach().cpu().type(torch.int64)
+    words = tokenizer.decode(positions)
+    return ' '.join(words)
 
 
-# def write_pred(input_, logits, in_int2tk, out_int2tk, filename, label=''):
-#     in_text = logits2text(input_, in_int2tk)
-#     out_text = logits2text(logits, out_int2tk)
-#     data = f'\n{"-"*100}\n{label}\n{"-"*100}\nIN: {in_text}\nOUT: {out_text}\n{"-"*100}'
-#     with open(filename,'a' if Path(filename).is_file() else 'w', encoding="utf-8") as fp:
-#          fp.write(data)
-#     return in_text, out_text
+def write_pred(input_, logits, tokenizer, filename, label=''):
+    in_text = logits2text(input_, tokenizer)
+    out_text = logits2text(logits, tokenizer)
+    data = f'\n{"-"*100}\n{label}\n{"-"*100}\nIN: {in_text}\nOUT: {out_text}\n{"-"*100}'
+    with open(filename,'a' if Path(filename).is_file() else 'w', encoding="utf-8") as fp:
+         fp.write(data)
+    return in_text, out_text
+
 
 # @torch.no_grad()
 # def sample(

@@ -148,7 +148,8 @@ class PretrainSet(Dataset):
             self.dataset = torch.hstack([torch.tensor(data, dtype=torch.int64) for data in dataset])
         else:
             self.dataset = dataset
-        self.len = len(self.dataset) - (block_size + 1)
+        self.max_start = len(self.dataset) - (block_size + 1)
+        self.len = self.max_start
 
     def __len__(self):
         return self.len
@@ -159,7 +160,7 @@ class PretrainSet(Dataset):
             torch.LongTensor: [block_size, ] - input tokens encoding.
             torch.LongTensor: [block_size, ] - ouput tokens encoding.
         """
-        start = random.randint(0, self.len)
+        start = random.randint(0, self.max_start)
         end = start + self.block_size
         return self.dataset[start:end], self.dataset[start + 1:end + 1]
 

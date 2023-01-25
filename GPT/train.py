@@ -15,7 +15,8 @@ __author__ = "__Girish_Hegde__"
 
 
 # =============================================================
-# Parameters  (GPT2 small version like params from https://github.com/karpathy/nanoGPT/blob/master/train.py)
+# Parameters
+# (params inspired from from https://github.com/karpathy/nanoGPT/blob/master/train.py)
 # =============================================================
 # model
 EMB_DIM = 256
@@ -27,18 +28,19 @@ DROPOUT = 0.0  # for pretraining 0 is good, for finetuning try 0.1+
 # logging
 LOGDIR = Path('./data/runs')
 LOAD = LOGDIR/'best.pt'  # or None
-PRINT_INTERVAL = 100
+PRINT_INTERVAL = 10
 # dataset
-DATASET = './GPT/data/wikitext_train.pkl'
-CACHE_DIR = './GPT/data/cache/wikitext_train'
-EVALSET = './GPT/data/wikitext_train.pkl'
-EVAL_CACHE_DIR = './GPT/data/cache/wikitext_train'
+DATASET = './data/wikitext_train.pkl'
+CACHE_DIR = './data/cache/wikitext_train'
+EVALSET = './data/wikitext_train.pkl'
+EVAL_CACHE_DIR = './data/cache/wikitext_train'
 # training
-BATCH_SIZE = 16
-GRAD_ACC_STEPS = 1  # used to simulate larger batch sizes
+BATCH_SIZE = 3
+GRAD_ACC_STEPS = 6  # used to simulate larger batch sizes
 MAX_ITERS = 600000  # total number of training iterations
-EVAL_INTERVAL = 2000
-EVAL_ITERS = 200
+# EVAL_INTERVAL = 2000
+EVAL_INTERVAL = 100
+EVAL_ITERS = 20
 EVAL_ONLY = False  # if True, script exits right after the first eval
 GRADIENT_CLIP = None  # 5
 # adamw optimizer
@@ -73,14 +75,15 @@ else:
 if (Path(EVAL_CACHE_DIR)/'dataset.pkl').is_file():
     evalset = tokenizer.read_dataset((Path(EVAL_CACHE_DIR)/'dataset.pkl'))
 else:
+    EVALSET = EVALSET if EVALSET is not None else DATASET
     evalset = tokenizer.tokenize_dataset(EVALSET, EVAL_CACHE_DIR, True, True)
 trainset = PretrainSet(trainset, CONTEXT)
 evalset = PretrainSet(evalset, CONTEXT)
-trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False)
-trainloader.len = MAX_ITERS*GRAD_ACC_STEPS
-evalloader = DataLoader(evalset, batch_size=BATCH_SIZE, shuffle=False)
-evalloader.len = EVAL_ITERS
 print(f'Total training samples = {len(trainset)}')
+trainset.len = MAX_ITERS*GRAD_ACC_STEPS
+evalset.len = EVAL_ITERS
+trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False)
+evalloader = DataLoader(evalset, batch_size=BATCH_SIZE, shuffle=False)
 
 # =============================================================
 # Model, Optimizer, Criterion init and Checkpoint load
@@ -121,10 +124,55 @@ def get_lr(iter):
 # =============================================================
 # Training loop - forward, backward, loss, optimize
 # =============================================================
-trainloss, evalloss, log_trainloss = 0, 0, 0
-trainloader, evalloader = iter(trainloader), iter(evalloader)
+trainloss, valloss, log_trainloss, train_steps = 0, 0, 0, 1
+trainloader = iter(trainloader)
 net.train()
+print('Training ...')
 for itr in range(itr, MAX_ITERS):
+    # =============================================================
+    # Validation
+    # =============================================================
+    if (itr%EVAL_INTERVAL == 0) or EVAL_ONLY:
+        print('Evaluating ...')
+        net.eval()
+        valloss = 0
+        with torch.no_grad():
+            for inp, tar in evalloader:
+                inp, tar = inp.to(DEVICE), tar.to(DEVICE)
+                logits = net(inp)
+                loss = criterion(logits.reshape(-1, tokenizer.n_vocab), tar.reshape(-1))
+                valloss += loss.item()
+        net.train()
+
+        valloss = valloss/EVAL_ITERS
+        trainloss = trainloss/train_steps
+
+        print('Saving checkpoint ...')
+        with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
+            fp.write(log_data + '\n')
+        save_checkpoint(
+            net, optimizer, itr, valloss, trainloss, best, LOGDIR/'ckpt.pt',
+        )
+
+        if valloss < best:
+            best = valloss
+            save_checkpoint(
+                net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt',
+            )
+
+        write_pred(inp[0], logits[0], tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
+
+        logfile = LOGDIR/'log.txt'
+        log_data = f"iteration: {itr}/{MAX_ITERS}, \tval loss: {valloss}, \ttrain loss: {trainloss}, best loss: {best}"
+        print(f'{"-"*100}\n{log_data}\n{"-"*100}')
+
+        trainloss, train_steps = 0, 1
+        if EVAL_ONLY: break
+        print('Training ...')
+
+    # =============================================================
+    # Training
+    # =============================================================
     # cosine scheduler with warmup learning rate decay
     if DECAY_LR:
         lr = get_lr(itr)
@@ -148,6 +196,7 @@ for itr in range(itr, MAX_ITERS):
     loss_ = loss_/GRAD_ACC_STEPS
     trainloss += loss_
     log_trainloss += loss_
+    train_steps += 1
     if GRADIENT_CLIP is not None:
         nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
     optimizer.step()
@@ -157,28 +206,6 @@ for itr in range(itr, MAX_ITERS):
         log_data = f"iteration: {itr}/{MAX_ITERS}, \ttrain loss: {log_trainloss/PRINT_INTERVAL}"
         print(log_data)
         log_trainloss = 0
-
-    # if itr%EVAL_INTERVAL == 0:
-    #     net.eval()
-    #     trainloss = trainloss/EVAL_INTERVAL
-    #     if trainloss < best:
-    #         best = trainloss
-    #         save_checkpoint(
-    #             in_int2tk, out_int2tk, '<S>', '<E>', '<P>', '<U>',
-    #             net, epoch, trainloss, best, LOGDIR/f'best.pt',
-    #         )
-    #     save_checkpoint(
-    #         in_int2tk, out_int2tk, '<S>', '<E>', '<P>', '<U>',
-    #         net, epoch, trainloss, best, LOGDIR/f'checkpoint.pt',
-    #     )
-    #     write_pred(inp[0], pred[0], in_int2tk, out_int2tk, LOGDIR/'predictions.txt', label=f'epoch = {epoch}')
-    #     logfile = LOGDIR/'log.txt'
-    #     log_data = f"epoch: {epoch}/{EPOCHS}, \tloss: {trainloss},\t best_loss: {best}"
-    #     print(f'{"-"*100}\n{log_data}\n{"-"*100}')
-    #     with open(logfile, 'a' if logfile.is_file() else 'w') as fp:
-    #         fp.write(log_data + '\n')
-    #     trainloss = 0
-    #     net.train()
 
 # =============================================================
 # END
