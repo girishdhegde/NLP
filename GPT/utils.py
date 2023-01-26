@@ -83,50 +83,40 @@ def write_pred(input_, logits, tokenizer, filename, label=''):
     return in_text, out_text
 
 
-# @torch.no_grad()
-# def sample(
-#         inp, net, tokenizer,
-#         in_int2tk, out_int2tk,
-#         start_token='<S>', end_token='<E>',
-#         pad_token='<P>', ukn_token='<U>',
-#         top_k=1, max_size=100, device='cpu'
-#     ):
-#     """ Function to sample output text from trained model.
-#         author: girish d. hegde
+@torch.no_grad()
+def sample(
+        prompt, net, tokenizer,
+        max_new_tokens=512, temperature=1.0, top_k=None,
+        device='cpu',
+    ):
+    """ Function to sample output text from trained model.
+        author: girish d. hegde
 
-#     Args:
-#         inp (str): Any input sentence.
-#         net (torch.nn.Module): trained model.
-#         tokenizer (callable object/function): input sentence tokenizer.
-#         in_int2tk (dict[int:str]): input integer to token lookup.
-#         out_int2tk (dict[int:str]): target integer to token lookup.
-#         start_token (str): start of sentence indication token.
-#         end_token (str): end of sentence indication token.
-#         pad_token (str): padding place holder indication token.
-#         ukn_token (str): token for unknown words in the vocab.
-#         top_k (int): topk sampling.
-#         max_size (int): Max output tokens/words size.
-#         device (torch.device): cpu or cuda.
+    Args:
+        prompt (str): Any input sentence.
+        net (torch.nn.Module): trained model.
+        tokenizer (BPETokenizer): BPETokenizer tokenizer instance.
+        max_new_tokens (int): generate max_new_tokens.
+        temperature (float): controls randomness. 1 -> as it is(random), 0 -> precise.
+        top_k (int): top_k sampling. provides diversity.
+        device (torch.device): cpu or cuda.
 
-#     Returns:
-#         str: output string/text.
-#     """
-#     in_tk2int = {tk: i for i, tk in in_int2tk.items()}
-#     out_tk2int = {tk: i for i, tk in out_int2tk.items()}
-#     start_value, end_value = out_tk2int[start_token], out_tk2int[end_token]
+    Refs:
+        https://github.com/karpathy/nanoGPT/blob/master/model.py
 
-#     net = net.to(device)
-#     net.eval()
+    Returns:
+        str: output string/text.
+    """
+    net = net.to(device)
 
-#     # Get tokens, add start & end token, fill unknown tokens if any.
-#     inp = [start_token] + [str(tk) for tk in tokenizer(inp)] + [end_token]
-#     inp = [tk if tk in in_tk2int else ukn_token for tk in inp]
-#     inp = [in_tk2int[tk] for tk in inp]
+    indices = tokenizer.encode(prompt)
+    indices = torch.tensor(indices, dtype=torch.int64, device=device)
 
-#     output = net.generate(
-#         inp, start_value, end_value, top_k, None, max_size
-#     )
-#     output = [out_int2tk[tk] for tk in output if tk != end_value]
+    output = net.generate(
+        indices, max_new_tokens, temperature, top_k,
+    )
 
-#     return ' '.join(output)
+    output = tokenizer.decode(output.to('cpu'))
+
+    return output
 

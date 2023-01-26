@@ -148,7 +148,7 @@ class GPT(nn.Module):
 
         self.emb = nn.Embedding(vocab_size, emb_dim)
         self.pos_emb = nn.Embedding(context_size, emb_dim)
-        self.emb_dropout = nn.Dropout(emb_dropout)
+        self.emb_drop = nn.Dropout(emb_dropout)
 
         self.transformer = nn.Sequential(
             *[Block(emb_dim, heads, attn_dropout, res_dropout) for _ in range(num_layers)]
@@ -184,15 +184,11 @@ class GPT(nn.Module):
         """
         pos = torch.arange(0, x.shape[1], dtype=torch.int64, device=x.device)[None, :]
         x = self.emb(x) + self.pos_emb(pos)
-        x = self.emb_dropout(x)
+        x = self.emb_drop(x)
         x = self.transformer(x)
         x = self.transformer_ln(x)
         x = self.to_logits(x)
         return x
-
-    @torch.no_grad()
-    def generate(self, ):
-        return
 
     def get_config(self):
         config = {
@@ -278,3 +274,35 @@ class GPT(nn.Module):
         ]
         optimizer = torch.optim.AdamW(optim_groups, lr=lr, betas=betas)
         return optimizer
+
+    @torch.no_grad()
+    def generate(self, indices, max_new_tokens, temperature=1.0, top_k=None):
+        """ Function to generate tokens from model
+
+        Args:
+            indices (torch.LongTensor): [N, ] - input encoded token indices from tokenizer.
+            max_new_tokens (int): generate max_new_tokens.
+            temperature (float): controls randomness. 1 -> as it is(random), 0 -> precise.
+            top_k (int): top_k sampling. provides diversity.
+
+        Refs:
+            https://github.com/karpathy/nanoGPT/blob/master/model.py
+
+        Returns:
+            torch.LongTensor: indices - [N + max_new_tokens] - generated tokens.
+        """
+        self.eval()
+        indices = indices[None, :] if len(indices.shape) == 1 else indices
+        for _ in range(max_new_tokens):
+            # if the sequence context is growing too long we must crop it at block_size
+            idx = indices if indices.size(1) <= self.context_size else indices[:, -self.context_size:]
+            logits = self(idx)
+            logits = logits[:, -1, :]/temperature
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = -float('Inf')
+            probs = F.softmax(logits, dim=-1)
+            tk = torch.multinomial(probs, num_samples=1)
+            indices = torch.cat((indices, tk), dim=1)
+        self.train()
+        return indices.squeeze()
