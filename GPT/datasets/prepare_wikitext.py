@@ -15,7 +15,7 @@ __author__ = "__Girish_Hegde__"
 
 
 split = 'train'  # or 'test'
-outdir = '../../data/'
+outdir = '../data/'
 
 wikitext = load_dataset("wikitext", 'wikitext-2-v1')
 dataset = wikitext[split]
