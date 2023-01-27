@@ -53,7 +53,8 @@ def process():
 
 split = 'train'  # or 'test'
 outdir = '../data/'
-block_size = 512 - 10  # -10 for other task specific and other special tokens if any required.
+block_size = 512 - 10  # -10 for other task specific and other special tokens if any required
+test_percentage = 10
 
 codeparrot = load_dataset("codeparrot/apps", split=split)
 print(f'dataset info: {codeparrot}')
@@ -75,8 +76,12 @@ pretrain = pretrain + que_pretrain + sol_pretrain
 
 outdir = Path(outdir)
 outdir.mkdir(exist_ok=True, parents=True)
-with (outdir/f'codeparrot_pretrain.pkl').open('wb') as fp:
-    pickle.dump(pretrain, fp)
+train_max = int(len(pretrain)*(100 - test_percentage)/100)
+
+with (outdir/f'codeparrot_train.pkl').open('wb') as fp:
+    pickle.dump(pretrain[:train_max], fp)
+with (outdir/f'codeparrot_test.pkl').open('wb') as fp:
+    pickle.dump(pretrain[train_max:], fp)
 
 codeparrot_finetune = {
     'train':{

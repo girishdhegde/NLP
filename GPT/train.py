@@ -30,10 +30,10 @@ LOGDIR = Path('./data/runs')
 LOAD = LOGDIR/'best.pt'  # or None
 PRINT_INTERVAL = 10
 # dataset
-DATASET = './data/wikitext_train.pkl'
-CACHE_DIR = './data/cache/wikitext_train'
-EVALSET = './data/wikitext_test.pkl'
-EVAL_CACHE_DIR = './data/cache/wikitext_test'
+DATASET = './data/codeparrot_train.pkl'
+CACHE_DIR = './data/cache/codeparrot_train'
+EVALSET = './data/codeparrot_test.pkl'
+EVAL_CACHE_DIR = './data/cache/codeparrot_test'
 N_TASKS = 10
 # training
 BATCH_SIZE = 3
