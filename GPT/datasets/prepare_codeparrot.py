@@ -76,12 +76,13 @@ pretrain = pretrain + que_pretrain + sol_pretrain
 
 outdir = Path(outdir)
 outdir.mkdir(exist_ok=True, parents=True)
-train_max = int(len(pretrain)*(100 - test_percentage)/100)
-
+test_mask = np.zeros(len(pretrain), bool)
+test_mask[np.random.uniform(0, 1, size=len(pretrain)) < (test_percentage/100)] = True
+pretrain = np.array(pretrain, dtype=object)
 with (outdir/f'codeparrot_train.pkl').open('wb') as fp:
-    pickle.dump(pretrain[:train_max], fp)
+    pickle.dump(pretrain[np.logical_not(test_mask)], fp)
 with (outdir/f'codeparrot_test.pkl').open('wb') as fp:
-    pickle.dump(pretrain[train_max:], fp)
+    pickle.dump(pretrain[test_mask], fp)
 
 codeparrot_finetune = {
     'train':{

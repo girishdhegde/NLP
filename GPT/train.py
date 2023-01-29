@@ -2,6 +2,7 @@ import math
 import time
 from pathlib import Path
 
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -27,7 +28,7 @@ CONTEXT = 512
 DROPOUT = 0.0  # for pretraining 0 is good, for finetuning try 0.1+
 # logging
 LOGDIR = Path('./data/runs')
-LOAD = LOGDIR/'best.pt'  # or None
+LOAD = LOGDIR/'ckpt.pt'  # or None
 PRINT_INTERVAL = 10
 # dataset
 DATASET = './data/codeparrot_train.pkl'
@@ -43,6 +44,7 @@ MAX_ITERS = 100_000  # total number of training iterations
 EVAL_INTERVAL = 500
 EVAL_ITERS = 100
 EVAL_ONLY = False  # if True, script exits right after the first eval
+SAVE_EVERY = False  # save unique checkpoint at every eval interval.
 GRADIENT_CLIP = None  # 5
 # adamw optimizer
 LR = 6e-4  # max learning rate
@@ -143,7 +145,7 @@ for itr in range(itr, MAX_ITERS):
         net.eval()
         valloss = 0
         with torch.no_grad():
-            for inp, tar in evalloader:
+            for inp, tar in tqdm(evalloader, total=len(evalloader)):
                 inp, tar = inp.to(DEVICE), tar.to(DEVICE)
                 logits = net(inp)
                 loss = criterion(logits.reshape(-1, tokenizer.n_vocab), tar.reshape(-1))
@@ -153,9 +155,13 @@ for itr in range(itr, MAX_ITERS):
         valloss = valloss/EVAL_ITERS
         trainloss = trainloss/EVAL_INTERVAL
 
+        # =============================================================
+        # Saving and Logging
+        # =============================================================
         print('Saving checkpoint ...')
+        ckpt_name = LOGDIR/'ckpt.pt' if not SAVE_EVERY else LOGDIR/f'ckpt_{itr}.pt'
         save_checkpoint(
-            net, optimizer, itr, valloss, trainloss, best, LOGDIR/'ckpt.pt', n_tasks=N_TASKS,
+            net, optimizer, itr, valloss, trainloss, best, ckpt_name, n_tasks=N_TASKS,
         )
 
         if valloss < best:
@@ -218,6 +224,3 @@ for itr in range(itr, MAX_ITERS):
 # =============================================================
 # END
 # =============================================================
-
-# TODO:
-# AMP
