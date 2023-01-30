@@ -170,18 +170,12 @@ class CodeSet(Dataset):
         author: girish d. hegde
 
     Dataset = {
-        'train':{
-            'questions':(list)string_questions,
-            'solutions':(list[list])multiple string solutions per question,
-        },
-        'test':{
-            'questions':(list)string_questions,
-            'solutions':(list[list])multiple string solutions per question,
-        }
+        'questions':(list)string_questions,
+        'solutions':(list[list])multiple string solutions per question,
     }
 
     Args:
-        dataset (dict[str:dict[str:list]]): code dataset.
+        dataset (dict[str:list]): code dataset.
         tokenizer (BPETokenizer): BPETokenizer instance with N_TASKS.
         code_token (int): code task token id. tiktoken.n_vocab <= code_token < tiktoken.n_vocab + N_TASKS - 1.
         end_token (int): end of task token id. tiktoken.n_vocab <= end_token < tiktoken.n_vocab + N_TASKS - 1.
@@ -189,8 +183,8 @@ class CodeSet(Dataset):
     """
     def __init__(self, dataset, tokenizer, code_token, end_token, invalid_id=-1):
         super().__init__()
-        self.questions = dataset['train']['questions']
-        self.solutions = dataset['train']['solutions']
+        self.questions = dataset['questions']
+        self.solutions = dataset['solutions']
 
         self.nsolutions = []
         for i, (que, sols) in enumerate(zip(self.questions, self.solutions)):

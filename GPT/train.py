@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from gpt import GPT
-from data import BPETokenizer, PretrainSet
+from data import BPETokenizer, PretrainSet, CodeSet, SeqCollater
 from utils import set_seed, save_checkpoint, load_checkpoint, write_pred
 
 
@@ -20,6 +20,8 @@ __author__ = "__Girish_Hegde__"
 # Parameters
 # (params inspired from from https://github.com/karpathy/nanoGPT/blob/master/train.py)
 # =============================================================
+# pre-training or finetuning
+PRETRAIN = True
 # model
 EMB_DIM = 256
 HEADS = 8
@@ -66,6 +68,9 @@ set_seed(108)
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 torch.backends.cudnn.benchmark = True  # optimize backend algorithms
+ignore_index = -100
+collate_fn = None
+extras = {'n_tasks':N_TASKS}
 
 # =============================================================
 # Tokenizer, Dataset, Dataloader init
@@ -80,13 +85,25 @@ if (Path(EVAL_CACHE_DIR)/'dataset.pkl').is_file():
 else:
     EVALSET = EVALSET if EVALSET is not None else DATASET
     evalset = tokenizer.tokenize_dataset(EVALSET, EVAL_CACHE_DIR, True, True)
-trainset = PretrainSet(trainset, CONTEXT)
-evalset = PretrainSet(evalset, CONTEXT)
+if PRETRAIN:
+    trainset = PretrainSet(trainset, CONTEXT)
+    evalset = PretrainSet(evalset, CONTEXT)
+else:
+    code_token,  end_token, ignore_index = tokenizer.n_vocab - N_TASKS, tokenizer.n_vocab - 1, -1
+    extras['code_token'] = code_token
+    extras['end_token'] = end_token
+    trainset = CodeSet(trainset, tokenizer, code_token, end_token, ignore_index)
+    evalset = CodeSet(evalset, tokenizer, code_token, end_token, ignore_index)
+    collate_fn = SeqCollater(end_token, end_token)
 print(f'Total training samples = {len(trainset)}')
 trainset.len = MAX_ITERS*BATCH_SIZE*GRAD_ACC_STEPS
 evalset.len = EVAL_ITERS*BATCH_SIZE
-trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False)
-evalloader = DataLoader(evalset, batch_size=BATCH_SIZE, shuffle=False)
+trainloader = DataLoader(
+    trainset, batch_size=BATCH_SIZE, shuffle=not PRETRAIN, collate_fn=collate_fn
+)
+evalloader = DataLoader(
+    evalset, batch_size=BATCH_SIZE, shuffle=not PRETRAIN, collate_fn=collate_fn
+)
 
 # =============================================================
 # Model, Optimizer, Criterion init and Checkpoint load
@@ -103,7 +120,7 @@ net.to(DEVICE)
 optimizer = net.get_optimizer(lr=LR, betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY)
 if optim_state is not None:
     optimizer.load_state_dict(optim_state)
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
 print(f'Total model parameters = {net.n_params} = {net.n_params/1e6}M')
 
 # =============================================================
@@ -166,13 +183,13 @@ for itr in range(itr, MAX_ITERS):
         print('Saving checkpoint ...')
         ckpt_name = LOGDIR/'ckpt.pt' if not SAVE_EVERY else LOGDIR/f'ckpt_{itr}.pt'
         save_checkpoint(
-            net, optimizer, itr, valloss, trainloss, best, ckpt_name, n_tasks=N_TASKS,
+            net, optimizer, itr, valloss, trainloss, best, ckpt_name, **extras,
         )
 
         if valloss < best:
             best = valloss
             save_checkpoint(
-                net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt', n_tasks=N_TASKS,
+                net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt', **extras,
             )
 
         write_pred(inp[0], logits[0], tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
