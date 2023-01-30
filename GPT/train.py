@@ -158,6 +158,11 @@ for itr in range(itr, MAX_ITERS):
         # =============================================================
         # Saving and Logging
         # =============================================================
+        if EVAL_ONLY:
+            log_data = f'val loss: {valloss}, \t time: {(end_time - start_time)/60}M'
+            print(f'{"-"*150}\n{log_data}\n{"-"*150}')
+            break
+
         print('Saving checkpoint ...')
         ckpt_name = LOGDIR/'ckpt.pt' if not SAVE_EVERY else LOGDIR/f'ckpt_{itr}.pt'
         save_checkpoint(
@@ -182,7 +187,6 @@ for itr in range(itr, MAX_ITERS):
 
         trainloss = 0
         start_time = time.perf_counter()
-        if EVAL_ONLY: break
         print('Training ...')
 
     # =============================================================
