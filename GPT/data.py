@@ -165,5 +165,98 @@ class PretrainSet(Dataset):
         return self.dataset[start:end], self.dataset[start + 1:end + 1]
 
 
-# TODO:
-# finetune dataloader and collate functions if required
+class CodeSet(Dataset):
+    """ Pytorch Dataset class for Coding question and Python answer dataset.
+        author: girish d. hegde
+
+    Dataset = {
+        'train':{
+            'questions':(list)string_questions,
+            'solutions':(list[list])multiple string solutions per question,
+        },
+        'test':{
+            'questions':(list)string_questions,
+            'solutions':(list[list])multiple string solutions per question,
+        }
+    }
+
+    Args:
+        dataset (dict[str:dict[str:list]]): code dataset.
+        tokenizer (BPETokenizer): BPETokenizer instance with N_TASKS.
+        code_token (int): code task token id. tiktoken.n_vocab <= code_token < tiktoken.n_vocab + N_TASKS - 1.
+        end_token (int): end of task token id. tiktoken.n_vocab <= end_token < tiktoken.n_vocab + N_TASKS - 1.
+        invalid_id (int): fill invalid indices of target tensor with invalid index in __getitem__ func.
+    """
+    def __init__(self, dataset, tokenizer, code_token, end_token, invalid_id=-1):
+        super().__init__()
+        self.questions = dataset['train']['questions']
+        self.solutions = dataset['train']['solutions']
+
+        self.nsolutions = []
+        for i, (que, sols) in enumerate(zip(self.questions, self.solutions)):
+            que = torch.tensor(tokenizer.encode(que), dtype=torch.int64)
+            sols = sorted(sols, key=len)
+            sols = [torch.tensor(tokenizer.encode(sol), dtype=torch.int64) for sol in sols]
+            self.questions[i] = que
+            self.solutions[i] = sols
+            self.nsolutions.append(len(sols))
+
+        self.end_token = torch.tensor([end_token], dtype=torch.int64)
+        self.code_token = torch.tensor([code_token], dtype=torch.int64)
+        self.invalid_id = invalid_id
+        self.len = len(self.questions)
+
+    def __len__(self):
+        return self.len
+
+    def __getitem__(self, idx):
+        """ getitem function
+            author: girish d. hegde
+
+        Args:
+            idx (int): index. 0 <= idx < self.len
+
+        Returns:
+            torch.LongTensor: [N, ] - input tokens encoding. question<|code_token|>solution<|end_token|>.
+            torch.LongTensor: [N, ] - target tokens encoding. [invalid_id, ...]solution<|end_token|>.
+        """
+        isol = random.randint(0, self.nsolutions[idx] - 1)
+        que, sol = self.questions[idx], self.solutions[idx][isol]
+        inp = torch.hstack([que, self.code_token, sol, self.end_token])
+        tar = torch.full(inp.shape, invalid_id)
+        code_start = len(que) + 1
+        tar[code_start:] = inp[code_start:]
+        return inp, tar
+
+
+class SeqCollater:
+    """ SeqCollater - variable sequence length collate function creater.
+
+    Args:
+        inp_pad_value (int): input padding value.
+        tgt_pad_value (int): target padding value.
+    """
+    def __init__(self, inp_pad_value=0, tgt_pad_value=0):
+        self.inp_pad_value = inp_pad_value
+        self.tgt_pad_value = tgt_pad_value
+
+    def __call__(self, batch):
+        """
+        Args:
+            batch (list[tuple[torch.tensor]]): [bs, ] - samples from __getitem__ dataset func.
+
+        Returns:
+            tuple[torch.tensor]:
+                torch.tensor[int64]: [bs, max_seq_len] - same sequence size batched input data.
+                torch.tensor[int64]: [bs, max_seq_len] - same sequence size batched target data.
+        """
+        inp = torch.nn.utils.rnn.pad_sequence(
+            [data[0] for data in batch],
+            batch_first=True, padding_value=self.inp_pad_value
+        )
+
+        tgt = torch.nn.utils.rnn.pad_sequence(
+            [data[1] for data in batch],
+            batch_first=True, padding_value=self.tgt_pad_value
+        )
+        return inp, tgt
