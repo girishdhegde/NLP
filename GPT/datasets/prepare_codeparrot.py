@@ -15,6 +15,7 @@ import tiktoken  # openai gpt2 bpe tokenizer
 
 __author__ = "__Girish_Hegde__"
 
+np.random.seed(108)
 
 def process():
     que_pretrain, sol_pretrain, que_finetune, sol_finetune = [], [], [], []
@@ -84,15 +85,25 @@ with (outdir/f'codeparrot_train.pkl').open('wb') as fp:
 with (outdir/f'codeparrot_test.pkl').open('wb') as fp:
     pickle.dump(pretrain[test_mask], fp)
 
-codeparrot_finetune = {
-    'train':{
-        'questions':que_finetune_train,
-        'solutions':sol_finetune_train,
-    },
-    'test':{
-        'questions':que_finetune_test,
-        'solutions':sol_finetune_test,
-    }
+que_finetune_train = np.array(que_finetune_train + que_finetune_test, dtype=object)
+sol_finetune_train = np.array(sol_finetune_train + sol_finetune_test, dtype=object)
+test_mask = np.zeros(len(que_finetune_train), bool)
+test_mask[
+    np.random.uniform(0, 1, size=len(que_finetune_train)) < (test_percentage/100)
+] = True
+codeparrot_finetune_train = {
+    'questions':que_finetune_train[np.logical_not(test_mask)],
+    'solutions':sol_finetune_train[np.logical_not(test_mask)],
 }
-with (outdir/f'codeparrot_finetune.pkl').open('wb') as fp:
-    pickle.dump(codeparrot_finetune, fp)
+codeparrot_finetune_test = {
+    'questions':que_finetune_train[test_mask],
+    'solutions':sol_finetune_train[test_mask],
+}
+
+(outdir/'cache'/'codeparrot_finetune_train').mkdir(exist_ok=True, parents=True)
+with (outdir/'cache'/'codeparrot_finetune_train'/'dataset.pkl').open('wb') as fp:
+    pickle.dump(codeparrot_finetune_train, fp)
+
+(outdir/'cache'/'codeparrot_finetune_test').mkdir(exist_ok=True, parents=True)
+with (outdir/'cache'/'codeparrot_finetune_test'/'dataset.pkl').open('wb') as fp:
+    pickle.dump(codeparrot_finetune_test, fp)
