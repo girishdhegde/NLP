@@ -76,8 +76,7 @@ torch.backends.cudnn.benchmark = True  # optimize backend algorithms
 ignore_index = -100
 collate_fn = None
 extras = {'n_tasks':N_TASKS}
-print('LR', LR)
-exit()
+
 # =============================================================
 # Tokenizer, Dataset, Dataloader init
 # =============================================================
