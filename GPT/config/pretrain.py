@@ -1,10 +1,10 @@
+"""Refs:
+        https://github.com/karpathy/nanoGPT/blob/master/train.py
+"""
 from pathlib import Path
 
-# =============================================================
-# Parameters
-# (params inspired from from https://github.com/karpathy/nanoGPT/blob/master/train.py)
-# =============================================================
-# pre-training or finetuning
+
+# pre-training
 PRETRAIN = True
 # model
 EMB_DIM = 256

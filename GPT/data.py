@@ -217,7 +217,7 @@ class CodeSet(Dataset):
         isol = random.randint(0, self.nsolutions[idx] - 1)
         que, sol = self.questions[idx], self.solutions[idx][isol]
         inp = torch.hstack([que, self.code_token, sol, self.end_token])
-        tar = torch.full(inp.shape, invalid_id)
+        tar = torch.full(inp.shape, self.invalid_id)
         code_start = len(que) + 1
         tar[code_start:] = inp[code_start:]
         return inp, tar
