@@ -16,6 +16,8 @@ from utils import set_seed, save_checkpoint, load_checkpoint, write_pred
 __author__ = "__Girish_Hegde__"
 
 
+# config file - (overrides the parameters given here)
+CFG = './config/pretrain.py'  # 'path/to/config/file.py'
 # =============================================================
 # Parameters
 # (params inspired from from https://github.com/karpathy/nanoGPT/blob/master/train.py)
@@ -62,6 +64,9 @@ MIN_LR = LR/10  # minimum learning rate, should be ~= learning_rate/10 per Chinc
 # dtype = 'bfloat16' # 'float32' or 'bfloat16'
 # compile = True # use PyTorch 2.0 to compile the model to be faster
 # init
+
+# warning!!! executes codes in config file directly with no safety!
+with open(CFG, 'r') as fp: exec(fp.read())  # import cfg settings
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 LOGDIR.mkdir(parents=True, exist_ok=True)
 set_seed(108)
@@ -71,7 +76,8 @@ torch.backends.cudnn.benchmark = True  # optimize backend algorithms
 ignore_index = -100
 collate_fn = None
 extras = {'n_tasks':N_TASKS}
-
+print('LR', LR)
+exit()
 # =============================================================
 # Tokenizer, Dataset, Dataloader init
 # =============================================================
