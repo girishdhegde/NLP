@@ -42,7 +42,6 @@ GRAD_ACC_STEPS = 8  # used to simulate larger batch sizes
 MAX_EPOCHS = 3
 # EVAL_INTERVAL = 2000
 EVAL_INTERVAL = 500
-EVAL_ONLY = False  # if True, script exits right after the first eval
 SAVE_EVERY = False  # save unique checkpoint at every eval interval.
 GRADIENT_CLIP = None  # 5
 # adamw optimizer
@@ -152,7 +151,7 @@ for epoch in range(epoch, MAX_EPOCHS + 1):
             # =============================================================
             # Validation
             # =============================================================
-            if (itr%EVAL_INTERVAL == 0) or EVAL_ONLY:
+            if (itr%EVAL_INTERVAL == 0):
                 print('Evaluating ...')
                 trainloss = trainloss/EVAL_INTERVAL
                 if evalloader is not None:

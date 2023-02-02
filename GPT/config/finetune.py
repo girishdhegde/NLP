@@ -9,7 +9,7 @@ CONTEXT = 512
 DROPOUT = 0.1
 # logging
 LOGDIR = Path('./data/code_finetuning')
-LOAD = Path('./data/runs/ckpt.pt')  # 'LOGDIR/'ckpt.pt
+LOAD = Path('./data/runs/ckpt.pt')  # LOGDIR/'ckpt.pt'
 PRINT_INTERVAL = 10
 # dataset
 DATASET = './data/cache/codeparrot_finetune_train/dataset.pkl'
