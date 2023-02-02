@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from gpt import GPT
-from data import BPETokenizer, PretrainSet, CodeSet, SeqCollater
+from data import BPETokenizer, PretrainSet
 from utils import set_seed, save_checkpoint, load_checkpoint, write_pred
 
 
@@ -17,13 +17,11 @@ __author__ = "__Girish_Hegde__"
 
 
 # config file - (overrides the parameters given here)
-CFG = './config/finetune.py'  # 'path/to/config/file.py'
+CFG = './config/pretrain.py'  # 'path/to/config/file.py'
 # =============================================================
 # Parameters
 # (params inspired from from https://github.com/karpathy/nanoGPT/blob/master/train.py)
 # =============================================================
-# pre-training or finetuning
-PRETRAIN = True
 # model
 EMB_DIM = 256
 HEADS = 8
@@ -73,9 +71,7 @@ set_seed(108)
 torch.backends.cuda.matmul.allow_tf32 = True # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True # allow tf32 on cudnn
 torch.backends.cudnn.benchmark = True  # optimize backend algorithms
-ignore_index = -100
-collate_fn = None
-extras = {'n_tasks':N_TASKS, 'pre-training':PRETRAIN}
+extras = {'n_tasks':N_TASKS, 'pre-training':True}
 
 # =============================================================
 # Tokenizer, Dataset, Dataloader init
@@ -90,26 +86,18 @@ if (Path(EVAL_CACHE_DIR)/'dataset.pkl').is_file():
 else:
     EVALSET = EVALSET if EVALSET is not None else DATASET
     evalset = tokenizer.tokenize_dataset(EVALSET, EVAL_CACHE_DIR, True, True)
-if PRETRAIN:
-    trainset = PretrainSet(trainset, CONTEXT)
-    evalset = PretrainSet(evalset, CONTEXT)
-    print(f'Total training samples = {len(trainset)}')
-    trainset.len = MAX_ITERS*BATCH_SIZE*GRAD_ACC_STEPS
-    evalset.len = EVAL_ITERS*BATCH_SIZE
-else:
-    code_token,  end_token, ignore_index = tokenizer.n_vocab - N_TASKS, tokenizer.n_vocab - 1, -1
-    extras['code_token'] = code_token
-    extras['end_token'] = end_token
-    trainset = CodeSet(trainset, tokenizer, code_token, end_token, ignore_index)
-    evalset = CodeSet(evalset, tokenizer, code_token, end_token, ignore_index)
-    collate_fn = SeqCollater(end_token, end_token)
-    print(f'Total training samples = {len(trainset)}')
+
+trainset = PretrainSet(trainset, CONTEXT)
+evalset = PretrainSet(evalset, CONTEXT)
+print(f'Total training samples = {len(trainset)}')
+trainset.len = MAX_ITERS*BATCH_SIZE*GRAD_ACC_STEPS
+evalset.len = EVAL_ITERS*BATCH_SIZE
 
 trainloader = DataLoader(
-    trainset, batch_size=BATCH_SIZE, shuffle=not PRETRAIN, collate_fn=collate_fn
+    trainset, batch_size=BATCH_SIZE, shuffle=False,
 )
 evalloader = DataLoader(
-    evalset, batch_size=BATCH_SIZE, shuffle=not PRETRAIN, collate_fn=collate_fn
+    evalset, batch_size=BATCH_SIZE, shuffle=False,
 )
 
 # =============================================================
@@ -127,9 +115,7 @@ net.to(DEVICE)
 optimizer = net.get_optimizer(lr=LR, betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY)
 if optim_state is not None:
     optimizer.load_state_dict(optim_state)
-if not PRETRAIN: # if pre-trainig weights are loaded reinit iteration to 1.
-    if 'code_token' not in kwargs: itr = 1
-criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
+criterion = nn.CrossEntropyLoss()
 print(f'Total model parameters = {net.n_params} = {net.n_params/1e6}M')
 
 # =============================================================
@@ -155,14 +141,13 @@ def get_lr(iter):
 # Training loop - forward, backward, loss, optimize
 # =============================================================
 trainloss, valloss, log_trainloss = 0, 0, 0
-trainloader_ = iter(trainloader)
+trainloader = iter(trainloader)
 net.train()
 optimizer.zero_grad(set_to_none=True)
 # set_to_none -> instead of filling grad with zero tensor set it to None
 # reduce memory consumptionn + increases speed
 print('Training ...')
 start_time = time.perf_counter()
-n_forwards = 0
 for itr in range(itr, MAX_ITERS + 1):
     # =============================================================
     # Validation
@@ -222,11 +207,7 @@ for itr in range(itr, MAX_ITERS + 1):
     # forward, loss, backward with grad. accumulation
     loss_ = 0
     for step in range(GRAD_ACC_STEPS):
-        n_forwards += 1
-        if n_forwards >= len(trainloader):
-            trainloader_ = iter(trainloader)
-            n_forwards = 0
-        inp, tar = next(trainloader_)
+        inp, tar = next(trainloader)
         inp, tar = inp.to(DEVICE), tar.to(DEVICE)
 
         logits = net(inp)
