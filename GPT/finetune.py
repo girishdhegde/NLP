@@ -106,6 +106,8 @@ else:
     epoch = kwargs['epoch']
     if optim_state is not None:
         optimizer.load_state_dict(optim_state)
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = LR
 criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
 print(f'Total model parameters = {net.n_params} = {net.n_params/1e6}M')
 
