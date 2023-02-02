@@ -77,7 +77,7 @@ def logits2text(logits, tokenizer, ):
 def write_pred(input_, logits, tokenizer, filename, label=''):
     in_text = logits2text(input_, tokenizer)
     out_text = logits2text(logits, tokenizer)
-    data = f'\n{"-"*100}\n{label}\n{"-"*100}\n<INPUT>\n: {in_text}\n<PREDICTION>\n: {out_text}\n{"-"*100}'
+    data = f'\n{"-"*100}\n{label}\n{"-"*100}\n<|INPUT|>\n{in_text}\n<|PREDICTION|>\n{out_text}\n{"-"*100}'
     with open(filename,'a' if Path(filename).is_file() else 'w', encoding="utf-8") as fp:
          fp.write(data)
     return in_text, out_text

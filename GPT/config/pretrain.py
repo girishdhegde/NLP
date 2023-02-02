@@ -4,8 +4,6 @@
 from pathlib import Path
 
 
-# pre-training
-PRETRAIN = True
 # model
 EMB_DIM = 256
 HEADS = 8

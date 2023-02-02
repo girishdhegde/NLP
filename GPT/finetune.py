@@ -37,8 +37,8 @@ DATASET = './data/cache/codeparrot_train/dataset.pkl'
 EVALSET = './data/cache/codeparrot_test/dataset.pkl'
 N_TASKS = 10
 # training
-BATCH_SIZE = 3
-GRAD_ACC_STEPS = 6  # used to simulate larger batch sizes
+BATCH_SIZE = 2
+GRAD_ACC_STEPS = 8  # used to simulate larger batch sizes
 MAX_EPOCHS = 3
 # EVAL_INTERVAL = 2000
 EVAL_INTERVAL = 500
@@ -50,11 +50,6 @@ LR = 1e-5  # max learning rate
 WEIGHT_DECAY = 1e-2
 BETA1 = 0.9
 BETA2 = 0.95
-# learning rate decay settings
-DECAY_LR = True  # whether to decay the learning rate
-WARMUP_ITERS = 2000  # how many steps to warm up for
-LR_DECAY_ITERS = MAX_ITERS  # should be ~= max_iters per Chinchilla
-MIN_LR = LR/10  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 # system
 # dtype = 'bfloat16' # 'float32' or 'bfloat16'
 # compile = True # use PyTorch 2.0 to compile the model to be faster
@@ -106,7 +101,7 @@ if net_state is not None:
     net.load_state_dict(net_state)
 net.to(DEVICE)
 optimizer = net.get_optimizer(lr=LR, betas=(BETA1, BETA2), weight_decay=WEIGHT_DECAY)
-if kwargs['pre-trainig']: # if pre-trainig weights are loaded reinit iteration to 1.
+if kwargs['pre-training']: # if pre-trainig weights are loaded reinit iteration to 1.
     itr, best, epoch = 1, float('inf'), 1
 else:
     epoch = kwargs['epoch']
@@ -116,28 +111,9 @@ criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
 print(f'Total model parameters = {net.n_params} = {net.n_params/1e6}M')
 
 # =============================================================
-# Learning Rate Decay Scheduler (cosine with warmup)
-# =============================================================
-def get_lr(iter):
-    """Refs:
-            https://github.com/karpathy/nanoGPT/blob/master/train.py
-    """
-    # 1) linear warmup for warmup_iters steps
-    if iter < WARMUP_ITERS:
-        return LR * iter / WARMUP_ITERS
-    # 2) if iter > lr_decay_iters, return min learning rate
-    if iter > LR_DECAY_ITERS:
-        return MIN_LR
-    # 3) in between, use cosine decay down to min learning rate
-    decay_ratio = (iter - WARMUP_ITERS) / (LR_DECAY_ITERS - WARMUP_ITERS)
-    assert 0 <= decay_ratio <= 1
-    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff ranges 0..1
-    return MIN_LR + coeff * (LR - MIN_LR)
-
-# =============================================================
 # Training loop - forward, backward, loss, optimize
 # =============================================================
-trainloss, valloss, log_trainloss = 0, 0, 0
+trainloss, valloss, log_trainloss, loss_ = 0, 0, 0, 0
 net.train()
 optimizer.zero_grad(set_to_none=True)
 # set_to_none -> instead of filling grad with zero tensor set it to None
@@ -164,12 +140,6 @@ for epoch in range(epoch, MAX_EPOCHS + 1):
             loss_ = 0
             if GRADIENT_CLIP is not None:
                 nn.utils.clip_grad_norm_(net.parameters(), GRADIENT_CLIP)
-
-            # cosine scheduler with warmup learning rate decay
-            if DECAY_LR:
-                lr = get_lr(itr)
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = lr
             optimizer.step()
             optimizer.zero_grad(set_to_none=True)
 
@@ -221,7 +191,8 @@ for epoch in range(epoch, MAX_EPOCHS + 1):
                         net, optimizer, itr, valloss, trainloss, best, LOGDIR/'best.pt', **extras,
                     )
 
-                write_pred(inp[0], logits[0], tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
+                valid_logits = logits[0][tar[0] != ignore_index]
+                write_pred(inp[0], valid_logits, tokenizer, LOGDIR/'predictions.txt', label=f'iteration = {itr}')
 
                 logfile = LOGDIR/'log.txt'
                 log_data = f"epoch: {epoch}/{MAX_EPOCHS}, \titeration: {itr}, \tval loss: {valloss}, \ttrain loss: {trainloss}, \tbest loss: {best}"
