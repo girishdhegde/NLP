@@ -86,7 +86,7 @@ def write_pred(input_, logits, tokenizer, filename, label=''):
 @torch.no_grad()
 def sample(
         prompt, net, tokenizer,
-        max_new_tokens=512, temperature=1.0, top_k=None,
+        max_new_tokens=512, temperature=1.0, top_k=None, end_token=None,
         device='cpu',
     ):
     """ Function to sample output text from trained model.
@@ -99,24 +99,26 @@ def sample(
         max_new_tokens (int): generate max_new_tokens.
         temperature (float): controls randomness. 1 -> as it is(random), 0 -> precise.
         top_k (int): top_k sampling. provides diversity.
+        end_token (int): end generation token.
         device (torch.device): cpu or cuda.
 
     Refs:
         https://github.com/karpathy/nanoGPT/blob/master/model.py
 
     Returns:
-        str: output string/text.
+        str: output string/text(prompt + prediction).
+        str: prediction.
     """
     net = net.to(device)
 
     indices = tokenizer.encode(prompt)
     indices = torch.tensor(indices, dtype=torch.int64, device=device)
 
-    output = net.generate(
-        indices, max_new_tokens, temperature, top_k,
+    output, prediction = net.generate(
+        indices, max_new_tokens, temperature, top_k, end_token
     )
 
     output = tokenizer.decode(output.to('cpu'))
-
-    return output
+    prediction = tokenizer.decode(prediction.to('cpu'))
+    return output, prediction
 
