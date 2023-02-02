@@ -276,7 +276,7 @@ class GPT(nn.Module):
         return optimizer
 
     @torch.no_grad()
-    def generate(self, indices, max_new_tokens, temperature=1.0, top_k=None):
+    def generate(self, indices, max_new_tokens, temperature=1.0, top_k=None, end_token=None):
         """ Function to generate tokens from model
 
         Args:
@@ -284,15 +284,18 @@ class GPT(nn.Module):
             max_new_tokens (int): generate max_new_tokens.
             temperature (float): controls randomness. 1 -> as it is(random), 0 -> precise.
             top_k (int): top_k sampling. provides diversity.
+            end_token (int): end generation token.
 
         Refs:
             https://github.com/karpathy/nanoGPT/blob/master/model.py
 
         Returns:
             torch.LongTensor: indices - [N + max_new_tokens] - generated tokens.
+            torch.LongTensor: pred - [max_new_tokens] - generated new tokens.
         """
         self.eval()
         indices = indices[None, :] if len(indices.shape) == 1 else indices
+        prompt_len = indices.shape[1]
         for _ in range(max_new_tokens):
             # if the sequence context is growing too long we must crop it at block_size
             idx = indices if indices.size(1) <= self.context_size else indices[:, -self.context_size:]
@@ -303,6 +306,8 @@ class GPT(nn.Module):
                 logits[logits < v[:, [-1]]] = -float('Inf')
             probs = F.softmax(logits, dim=-1)
             tk = torch.multinomial(probs, num_samples=1)
+            if tk.item() == end_token: break
             indices = torch.cat((indices, tk), dim=1)
         self.train()
-        return indices.squeeze()
+        indices = indices.squeeze()
+        return indices, indices[prompt_len:]
