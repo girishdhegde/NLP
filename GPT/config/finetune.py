@@ -17,7 +17,7 @@ EVALSET = './data/cache/codeparrot_finetune_test/dataset.pkl'
 # training
 BATCH_SIZE = 2
 GRAD_ACC_STEPS = 8
-EVAL_INTERVAL = 100
+EVAL_INTERVAL = 1
 MAX_EPOCHS = 3
 # adamw optimizer
 LR = 1e-4

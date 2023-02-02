@@ -172,11 +172,6 @@ for epoch in range(epoch, MAX_EPOCHS + 1):
                 # =============================================================
                 # Saving and Logging
                 # =============================================================
-                if EVAL_ONLY:
-                    log_data = f'val loss: {valloss}, \t time: {(end_time - start_time)/60}M'
-                    print(f'{"-"*150}\n{log_data}\n{"-"*150}')
-                    exit()
-
                 print('Saving checkpoint ...')
                 ckpt_name = LOGDIR/'ckpt.pt' if not SAVE_EVERY else LOGDIR/f'ckpt_{itr}.pt'
                 extras['epoch'] = epoch

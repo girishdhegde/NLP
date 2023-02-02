@@ -220,7 +220,7 @@ class CodeSet(Dataset):
         tar = torch.full(inp.shape, self.invalid_id)
         code_start = len(que) + 1
         tar[code_start:] = inp[code_start:]
-        return inp, tar
+        return inp[:-1], tar[1:]
 
 
 class SeqCollater:
