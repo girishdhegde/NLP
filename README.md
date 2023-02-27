@@ -1,4 +1,4 @@
-# NLP
+# [WiP]NLP
 This repository contains implementation of Deep learning based **Language Models** from scratch. Including:
 * [RNN](./RNN)
 * [LSTM](./LSTM)
@@ -19,7 +19,19 @@ cd RNN or LSTM or Transformer or GPT
 ```
 Refer respective README.md in subdirectories for more details.
 
+# Requirements
+* python
+* pytorch
+
 # Installation
+```
+    pip install -r requirements.txt
+```
 # Usage
+* module
+* training
+* inference
+* visualization
+
 # Visualization and Results
 # References
