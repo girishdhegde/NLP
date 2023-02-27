@@ -2,7 +2,7 @@
 This repository contains implementation of Deep learning based **Language Models** from scratch. Including:
 * [RNN](./RNN)
 * [LSTM](./LSTM)
-* [Transformers](./Transformer)
+* [Transformer](./Transformer)
 * [GPT](./GPT)
 
 
