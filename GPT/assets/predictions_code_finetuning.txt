@@ -1,0 +1,649 @@
+
+----------------------------------------------------------------------------------------------------
+iteration = 500
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+Complete the method so that it formats the words into a single comma separated value. The last word should be separated by the word 'and' instead of a comma. The method takes in an array of strings and returns a single formatted string. Empty string values should be ignored. Empty arrays or null/nil values being passed into the method should result in an empty string being returned. 
+
+```Python
+format_words(['ninja', 'samurai', 'ronin']) # should return "ninja, samurai and ronin"
+format_words(['ninja', '', 'ronin']) # should return "ninja and ronin"
+format_words([]) # should return ""
+```
+```Haskell
+formatWords ["ninja", "samurai", "ronin"] -- should return "ninja, samurai and ronin"
+formatWords ["ninja", "", "ronin"] -- should return "ninja and ronin"
+formatWords [] -- should return ""
+```<|1|>def format_words(words):
+	if not words or words == ['']:
+		return ''
+	words = [i for i in words if i != '']
+	if len(words) == 1:
+		return words[0]
+	return ', '.join(words[:-1]) + ' and ' + words[-1]<|10|>
+<|PREDICTION|>
+def format_words(words):
+	if not words or words == ['']:
+		return ''
+	words = [i for i in words if i != '']
+	if len(words) == 1:
+		return words[0]
+	return ', '.join(words[:-1]) + ' and ' + words[-1]<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 501
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+#Permutation  position
+In this kata you will have to permutate through a string of lowercase letters, each permutation will start at ```a``` and you must calculate how many iterations it takes to reach the current permutation.
+
+##examples
+```
+input: 'a'
+result: 1
+
+input: 'c'
+result: 3
+
+input: 'z'
+result: 26
+
+input: 'foo'
+result: 3759
+
+input: 'aba'
+result: 27
+
+input: 'abb'
+result: 28
+
+```<|1|>permutation_position=lambda p,a=__import__('string').printable:int(p.translate(p.maketrans(a[10:36],a[:26])),26)+1<|10|>
+<|PREDICTION|>
+permutation_position=lambda p,a=__import__('string').printable:int(p.translate(p.maketrans(a[10:36],a[:26])),26)+1<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 502
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+# Story
+
+You and a group of friends are earning some extra money in the school holidays by re-painting the numbers on people's letterboxes for a small fee.
+
+Since there are 10 of you in the group each person just concentrates on painting one digit! For example, somebody will paint only the ```1```'s, somebody else will paint only the ```2```'s and so on...
+
+But at the end of the day you realise not everybody did the same amount of work.
+
+To avoid any fights you need to distribute the money fairly. That's where this Kata comes in.
+
+# Kata Task
+
+Given the ```start``` and ```end``` letterbox numbers, write a method to return the frequency of all 10 digits painted.
+
+# Example
+
+For ```start``` = 125, and ```end``` = 132
+
+The letterboxes are
+* 125 = ```1```, ```2```, ```5```
+* 126 = ```1```, ```2```, ```6```
+* 127 = ```1```, ```2```, ```7```
+* 128 = ```1```, ```2```, ```8```
+* 129 = ```1```, ```2```, ```9```
+* 130 = ```1```, ```3```, ```0```
+* 131 = ```1```, ```3```, ```1```
+* 132 = ```1```, ```3```, ```2```
+
+The digit frequencies are 1 x ```0```, 9 x ```1```, 6 x ```2``` etc...
+
+and so the method would return ```[1,9,6,3,0,1,1,1,1,1]```
+
+# Notes
+
+* 0 < ```start``` <= ```end```
+* In C, the returned value will be free'd.<|1|>def paint_letterboxes(start, finish):
+	painted = "".join(map(str, range(start, finish+1)))
+	return [painted.count(digit) for digit in "0123456789"]<|10|>
+<|PREDICTION|>
+def paint_letteren(start, finish):
+	<|10|> = "".join(map(str, range(start, finish+1)))
+	return [<|10|>.count(digit) for digit in "0123456789"]<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 503
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+We've got a message from the **Librarian**. As usual there're many `o` and `k` in it and, as all codewarriors don't know "Ook" language we need that you translate this message.
+
+**tip** : it seems traditional "Hello World!" would look like :
+`Ok, Ook, Ooo?  Okk, Ook, Ok?  Okk, Okk, Oo?  Okk, Okk, Oo?  Okk, Okkkk?  Ok, Ooooo?  Ok, Ok, Okkk?  Okk, Okkkk?  Okkk, Ook, O?  Okk, Okk, Oo?  Okk, Ook, Oo?  Ook, Ooook!`
+
+Your task is to implement a function `okkOokOo(okkOookk)`, that would take the `okkOookk` message as input and return a decoded human-readable string.
+
+*eg*:
+```python
+okkOokOo('Ok, Ook, Ooo!')  # -> 'H'
+okkOokOo('Ok, Ook, Ooo?  Okk, Ook, Ok?  Okk, Okk, Oo?  Okk, Okk, Oo?  Okk, Okkkk!')  # -> 'Hello'
+okkOokOo('Ok, Ok, Okkk?  Okk, Okkkk?  Okkk, Ook, O?  Okk, Okk, Oo?  Okk, Ook, Oo?  Ook, Ooook!')  # -> 'World!'
+```<|1|>def okkOokOo(s):
+	s=s.lower().replace(',', '').replace(' ','').replace('!', '?').replace('o', '0').replace('k', '1').split('?')
+	res=""
+	for i in s[:-1] :
+		res=res+chr(int(i, base=2))
+	return res<|10|>
+<|PREDICTION|>
+def okkOokOo(s):
+	s=s.lower().replace(',', '').replace(' ' baby).replace('!', '?').replace('o', '0').replace('k', '1').split('?')
+	res=""
+	for i in s[:-1] :
+		res=res+chr(int(i, base=2))
+	return res<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 504
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+There are some animals in a garden. Each of them is a crane with two legs or a turtle with four legs.
+Takahashi says: "there are X animals in total in the garden, and they have Y legs in total." Determine whether there is a combination of numbers of cranes and turtles in which this statement is correct.
+
+-----Constraints-----
+ - 1 \leq X \leq 100
+ - 1 \leq Y \leq 100
+ - All values in input are integers.
+
+-----Input-----
+Input is given from Standard Input in the following format:
+X Y
+
+-----Output-----
+If there is a combination of numbers of cranes and turtles in which the statement is correct, print Yes; otherwise, print No.
+
+-----Sample Input-----
+3 8
+
+-----Sample Output-----
+Yes
+
+The statement "there are 3 animals in total in the garden, and they have 8 legs in total" is correct if there are two cranes and one turtle. Thus, there is a combination of numbers of cranes and turtles in which the statement is correct.<|1|>X,Y = map(int,input().split())
+turu = 2
+kame = 4
+for i in range(X+1):
+	ans = turu * i + kame*(X-i)
+	if ans == Y:
+		print("Yes")
+		return
+print("No")<|10|>
+<|PREDICTION|>
+X,Y = map(int,input().split())
+tider = 2
+kame = 4
+for i in range(X+1):
+	ans =<|10|>u * i + kame*(X-i)
+	if ans == Y:
+		print("Yes")
+		return
+print("No")<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 505
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+Failed Filter - Bug Fixing #3
+Oh no, Timmy's filter doesn't seem to be working? Your task is to fix the FilterNumber function to remove all the numbers from the string.<|1|>def filter_numbers(string):
+	numbers="1234567890"
+	return "".join(x for x in string if x not in numbers)<|10|>
+<|PREDICTION|>
+def filter_numbers(string):
+	numbers="1234567890"
+	return "".join(x for x in string if x not in numbers)<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 506
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+A palindrome is a word, phrase, number, or other sequence of characters which reads the same backward as forward. Examples of numerical palindromes are: 
+
+2332
+110011
+54322345
+
+For a given number ```num```, write a function which returns the number of numerical palindromes within each number. For this kata, single digit numbers will NOT be considered numerical palindromes. 
+
+Return "Not valid" if the input is not an integer or is less than 0.
+
+```
+palindrome(5) => 0
+palindrome(1221) => 2 
+palindrome(141221001) => 5  
+palindrome(1294) => 0
+palindrome("1221") => "Not valid"
+
+```
+
+```Haskell
+In Haskell, return a Maybe Int with Nothing for negative numbers.
+```
+
+Other Kata in this Series:
+Numerical Palindrome #1
+Numerical Palindrome #1.5
+Numerical Palindrome #2
+Numerical Palindrome #3
+Numerical Palindrome #3.5
+Numerical Palindrome #4
+Numerical Palindrome #5<|1|>def palindrome(num):
+	if type(num) is not int or num < 0:
+		return "Not valid"
+	if num < 10:
+		return 0
+	
+	counter = 0
+	num = str(num)
+	for i in range(0,len(num)-1):
+		for r in range(i + 2, len(num)+1):
+			if num[i:r] == num[i:r][::-1]:
+				counter += 1	
+	return counter<|10|>
+<|PREDICTION|>
+def palindrome(num):
+	if type(num) is not int or num < 0:
+		return "Not valid"
+	if num < 10:
+		return 0
+	
+	counter = 0
+	num = str(num)
+	for i in range(0,len(num)-1):
+		for r in range(i + 2, len(num)+1):
+			if num[i:r] == num[i:r][::-1]:
+				counter += 1	
+	return counter<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 507
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+Find the largest integer that can be formed with exactly N matchsticks, under the following conditions:
+ - Every digit in the integer must be one of the digits A_1, A_2, ..., A_M (1 \leq A_i \leq 9).
+ - The number of matchsticks used to form digits 1, 2, 3, 4, 5, 6, 7, 8, 9 should be 2, 5, 5, 4, 5, 6, 3, 7, 6, respectively.
+
+-----Constraints-----
+ - All values in input are integers.
+ - 2 \leq N \leq 10^4
+ - 1 \leq M \leq 9
+ - 1 \leq A_i \leq 9
+ - A_i are all different.
+ - There exists an integer that can be formed by exactly N matchsticks under the conditions.
+
+-----Input-----
+Input is given from Standard Input in the following format:
+N M
+A_1 A_2 ... A_M
+
+-----Output-----
+Print the largest integer that can be formed with exactly N matchsticks under the conditions in the problem statement.
+
+-----Sample Input-----
+20 4
+3 7 8 4
+
+-----Sample Output-----
+777773
+
+The integer 777773 can be formed with 3 + 3 + 3 + 3 + 3 + 5 = 20 matchsticks, and this is the largest integer that can be formed by 20 matchsticks under the conditions.<|1|>N,M = map(int,input().split())
+A = list(map(int,input().split()))
+weight = [0,2,5,5,4,5,6,3,7,6]
+dp = [-1]*(N+1)
+dp[0]=0
+for i in range(N+1):
+  for a in A:
+	if i + weight[a]<N+1:
+	  dp[i+weight[a]]=max(dp[i+weight[a]],dp[i]*10+a)
+print(dp[N])<|10|>
+<|PREDICTION|>
+N,M = map(int,input().split())
+A = list(map(int,input().split()))
+weight = [0,2,5,5,4,5,6,3,7,6]
+dp = [-1]*(N+1)
+dp[0]=0
+for i in range(N+1):
+  for a in A:
+	if i + weight[a]<N+1:
+	  dp[i+weight[a]]=max(dp[i+weight[a]],dp[i]*10+a)
+print(dp[N])<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 508
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+You are given three integers A, B and C. Find the minimum number of operations required to make A, B and C all equal by repeatedly performing the following two kinds of operations in any order:
+ - Choose two among A, B and C, then increase both by 1.
+ - Choose one among A, B and C, then increase it by 2.
+It can be proved that we can always make A, B and C all equal by repeatedly performing these operations.
+
+-----Constraints-----
+ - 0 \leq A,B,C \leq 50
+ - All values in input are integers.
+
+-----Input-----
+Input is given from Standard Input in the following format:
+A B C
+
+-----Output-----
+Print the minimum number of operations required to make A, B and C all equal.
+
+-----Sample Input-----
+2 5 4
+
+-----Sample Output-----
+2
+
+We can make A, B and C all equal by the following operations:
+ - Increase A and C by 1. Now, A, B, C are 3, 5, 5, respectively.
+ - Increase A by 2. Now, A, B, C are 5, 5, 5, respectively.<|1|>import numpy as np
+
+# A, B, C = [11, 12, 15]
+A, B, C = list(map(int, input().split()))
+
+
+vals = np.array([A, B, C])
+vals = np.sort(vals)
+
+sumval = vals.sum()
+
+
+
+cn = vals[-1] + np.sum(vals[:2]) % 2
+
+n = (3 * cn - sumval) // 2
+
+print(n)
+
+<|10|>
+<|PREDICTION|>
+import numpy as np
+
+# A, B, C = [11, 12, 12]
+A, B, C = list(map(int, input().split()))
+
+
+vals = np.array([A, B, C])
+vals = np.sort(vals)
+
+sumval = vals.sum()
+
+
+
+cn = vals[-1] + np.sum(vals[:2]) % 2
+
+n = (3 * cn - sumval) // 2
+
+print(n)
+
+<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 509
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+There are some animals in a garden. Each of them is a crane with two legs or a turtle with four legs.
+Takahashi says: "there are X animals in total in the garden, and they have Y legs in total." Determine whether there is a combination of numbers of cranes and turtles in which this statement is correct.
+
+-----Constraints-----
+ - 1 \leq X \leq 100
+ - 1 \leq Y \leq 100
+ - All values in input are integers.
+
+-----Input-----
+Input is given from Standard Input in the following format:
+X Y
+
+-----Output-----
+If there is a combination of numbers of cranes and turtles in which the statement is correct, print Yes; otherwise, print No.
+
+-----Sample Input-----
+3 8
+
+-----Sample Output-----
+Yes
+
+The statement "there are 3 animals in total in the garden, and they have 8 legs in total" is correct if there are two cranes and one turtle. Thus, there is a combination of numbers of cranes and turtles in which the statement is correct.<|1|>def answer(x: int, y: int) -> str:
+	if x * 2 <= y <= x * 4 and y % 2 == 0:
+		return 'Yes'
+	return 'No'
+
+
+def main():
+	x, y = map(int, input().split())
+	print(answer(x, y))
+
+
+def __starting_point():
+	main()
+__starting_point()<|10|>
+<|PREDICTION|>
+def answer(x: int, y: int) -> str:
+	if x * 2 <= y <= x * 4 and y % 2 == 0:
+		return 'Yes'
+	return 'No'
+
+
+def main():
+	x, y = map(int, input().split())
+	print(answer(x, y))
+
+
+def __starting_point():
+	main()
+__starting_point()<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 510
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+The gray code is a binary numeral system where two successive values differ in only one bit.
+
+Given a non-negative integer n representing the total number of bits in the code, print the sequence of gray code. A gray code sequence must begin with 0.
+
+Example 1:
+
+
+Input: 2
+Output: [0,1,3,2]
+Explanation:
+00 - 0
+01 - 1
+11 - 3
+10 - 2
+
+For a given n, a gray code sequence may not be uniquely defined.
+For example, [0,2,3,1] is also a valid gray code sequence.
+
+00 - 0
+10 - 2
+11 - 3
+01 - 1
+
+
+Example 2:
+
+
+Input: 0
+Output: [0]
+Explanation: We define the gray code sequence to begin with 0.
+             A gray code sequence of n has size = 2n, which for n = 0 the size is 20 = 1.
+             Therefore, for n = 0 the gray code sequence is [0].<|1|>class Solution:
+	 def helper(self, n):
+		 if n == 0:
+			 return ['0']
+		 if n == 1:
+			 return ['0', '1']
+		 ret = []
+		 for code in self.helper(n - 1):
+			 ret.append('0' + code)
+		 for code in reversed(self.helper(n - 1)):
+			 ret.append('1' + code)
+		 return ret
+	 def grayCode(self, n):
+		 """
+		 :type n: int
+		 :rtype: List[int]
+		 """
+		 if n == 0:
+			 return [0]
+		 ret = []
+		 code = self.grayCode(n - 1)
+		 ret += code
+		 for v in reversed(code):
+			 ret.append(2 ** (n - 1) + v)
+		 return ret
+		 
+<|10|>
+<|PREDICTION|>
+class Solution:
+	 def helper(self, n):
+		 if n == 0:
+			 return ['0']
+		 if n == 1:
+			 return ['0', '1']
+		 ret = []
+		 for code in self.helper(n - 1):
+			 ret.append('0' + code)
+		 for code in reversed(self.helper(n - 1)):
+			 ret.append('1' + code)
+		 return ret
+	 defiderdt(self, n):
+		 """
+		 :type n: int
+		 :rtype: List[int]
+		 """
+		 if n == 0:
+			 return [0]
+		 ret = []
+		 code = self. babydate(n - 1)
+		 ret += code
+		 for v in reversed(code):
+			 ret.append(2 ** (n - 1) + v)
+		 return ret
+		 
+<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 511
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+For a sequence a of n integers between 1 and m, inclusive, denote f(a) as the number of distinct subsequences of a (including the empty subsequence).
+
+You are given two positive integers n and m. Let S be the set of all sequences of length n consisting of numbers from 1 to m. Compute the sum f(a) over all a in S modulo 10^9 + 7.
+
+
+-----Input-----
+
+The only line contains two integers n and m (1 ≤ n, m ≤ 10^6) — the number of elements in arrays and the upper bound for elements.
+
+
+-----Output-----
+
+Print the only integer c — the desired sum modulo 10^9 + 7.
+
+
+-----Examples-----
+Input
+1 3
+
+Output
+6
+
+Input
+2 2
+
+Output
+14
+
+Input
+3 3
+
+Output
+174<|1|>P = 10**9 + 7
+
+n, k = list(map(int, input().split()))
+
+print(n + 1 if k == 1 else (k * pow(2 * k - 1, n, P) - pow(k, n, P)) * pow(k - 1, P - 2, P) % P)
+<|10|>
+<|PREDICTION|>
+P = 10**9 + 7
+
+n, k = list(map(int, input().split()))
+
+print(n + 1 if k == 1 else (k * pow(2 * k - 1, n, P) - pow(k, n, P)) * pow(k - 1, P - 2, P) % P)
+<|10|>
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+iteration = 512
+----------------------------------------------------------------------------------------------------
+<|INPUT|>
+Sinchan and his friends loves to eat. They have a 2D rectangular cake which they want to share. Sinchan is very kind and offers his friends to eat the cake first, all friends goes one by one to eat the cake. Each friend will cut cake into two parts. First part of the cake will be largest possible square from the cake, that the friend will eat, and will leave the second part for others, it continues untill cake is over or every friend gets to eat the cake.
+Now Sinchan wonder how much cake would he be able to get.
+
+-----Input-----
+- First line of input contain T, denoting number of test case.
+- First line of each test case contains N, denoting number of friends.
+- Second line of test case contain L, B (L x B) denoting dimension of cake.
+
+-----Output-----
+- For each test case, if Sinchan gets to eat the cake print (without quotes) "Yes #" where # is area of cake that Sinchan gets. Otherwise print  (without quotes) "No"
+
+-----Constraints-----
+- 1 ≤ T, N, L, B ≤ 1000
+
+-----Example-----
+Input:
+3
+2
+5 3
+4
+4 8
+1
+1 2
+
+Output:
+Yes 2
+No
+Yes 1
+
+-----Explanation-----
+Example case 1. First friend divides 5x3 cake in 3x3 and 2x3 since 3x3 is largest possible square, second Friend divides 2x3 cake in 2x2 and 1x2 and eat 2x2 piece. Finaly Sinchan gets to eat and area of cake is 1*2 hence Output is (without quotes) "Yes 2"<|1|>for _ in range(eval(input())):
+ n = eval(input())
+ [l,b] = list(map(int,input().split()))
+ for i in range(n):
+  if l > b :
+   l -= b
+  elif b > l:
+   b -= l 
+  else:
+   l=b=0
+   break
+  if b== 0 or l==0:
+   break
+ if b == 0 or l == 0:
+  print('No')
+ else:
+  print('Yes',l*b)<|10|>
+<|PREDICTION|>
+for _ in range(eval(input())):
+ n = eval(input())
+ [l,b] = list(map(int,input().split()))
+ for i in range(n):
+  if l > b :
+   l -= b
+  elif b > l:
+   b -= l 
+  else:
+   l=b=0
+   break
+  if b== 0 or l==0:
+   break
+ if b == 0 or l == 0:
+  print('No')
+ else:
+  print('Yes',l*b)<|10|>
+----------------------------------------------------------------------------------------------------
