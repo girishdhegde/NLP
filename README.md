@@ -1,4 +1,4 @@
-# [WiP]NLP
+# NLP
 This repository contains implementation of Deep learning based **Language Models** from scratch. Including:
 * [RNN](./RNN)
 * [LSTM](./LSTM)
