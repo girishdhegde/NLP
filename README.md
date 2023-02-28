@@ -20,8 +20,8 @@ cd RNN or LSTM or Transformer or GPT
 Refer respective README.md in subdirectories for more details.
 
 # Requirements
-* python
-* pytorch
+* python >= 3.9
+* pytorch >= 1.13
 
 # Installation
 ```
