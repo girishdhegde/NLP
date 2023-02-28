@@ -39,9 +39,7 @@
   ```
 * BiGram Visualization
 <p align="center">
-  <img src="./assets/bigram.png" width="7200">
-  <br>
-  <em></em>
+  <img src="./assets/bigram.png">
 </p>
 
 # References
