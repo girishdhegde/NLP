@@ -34,9 +34,9 @@
 
 # CharRNN Results
 * Names Sampled from model trained on dataset of names
-```python
-kailanie, keilee, marlanie, meik, ariahna, kaileigh, analie, mariana, aleah, million, kairon, mariamandri, malayaan, kiman, marielle, kaylin, arlis, kayline, anan, annalyn, alaina, kelanie, annika, analia, kennet, alice, alexa, alissa, arlen, kailon, andreya, kairo, kaisen, alissandra, michel, marlen, kairon, maryshia, alicia, michel, marylynn, analea, alexia, annabella, ariely, alexxa, arias, marlana, alanie, kingson, arianna, mikeem, alania, karlie, karin, kayla, kennadee, maken, kara, analeigh, analeigh, kayleen, alice, aryah, aliana, marlayah, alaysha, mila, maryanne, karina, karam, makeyla, aleaha, melia, arisha, alekai, alianna, aryaan, kelani, alisha, analisa, analia, kaileena, marlin, arlee, makariah, malayah, mikiyah, analeigha, malikai, kennede, alisandro, kaylin, andrey, aryna, andersen, kennesse, marielle, alaniel, analea
-```
+  ```python
+  kailanie, keilee, marlanie, meik, ariahna, kaileigh, analie, mariana, aleah, million, kairon, mariamandri, malayaan, kiman, marielle, kaylin, arlis, kayline, anan, annalyn, alaina, kelanie, annika, analia, kennet, alice, alexa, alissa, arlen, kailon, andreya, kairo, kaisen, alissandra, michel, marlen, kairon, maryshia, alicia, michel, marylynn, analea, alexia, annabella, ariely, alexxa, arias, marlana, alanie, kingson, arianna, mikeem, alania, karlie, karin, kayla, kennadee, maken, kara, analeigh, analeigh, kayleen, alice, aryah, aliana, marlayah, alaysha, mila, maryanne, karina, karam, makeyla, aleaha, melia, arisha, alekai, alianna, aryaan, kelani, alisha, analisa, analia, kaileena, marlin, arlee, makariah, malayah, mikiyah, analeigha, malikai, kennede, alisandro, kaylin, andrey, aryna, andersen, kennesse, marielle, alaniel, analea
+  ```
 * BiGram Visualization
 <p align="center">
   <img src="./assets/bigram.png" alt="bigram">

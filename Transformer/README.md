@@ -26,6 +26,32 @@
 * English to Hindi Translation custom data loader and collater
 * Attention visualization 
 
+# English-Hindi Translation Results
+* Sample Translations
+    ```python
+    IN:  They both are teachers . 
+    OUT: वे दोनों अध्यापक हैं ।   
+
+    IN:  You said you would n't do that . 
+    OUT: तुम्हें ने कहा कहा । तुम वैसा नहीं । । 
+
+    IN:  Tom was naked .          
+    OUT: टॉम नंगा था ।             
+
+    IN:  You made me lose my mind .  
+    OUT: तुमने मेरी पागल कर दिया ।    
+
+    IN:  I believe you like your job .    
+    OUT: मुझे लगता है कि तुम तुम्हारा काम अच्छा लगता है । 
+    ```
+
+* Cross Attention Visualization
+<p align="center">
+  <img src="./assets/cross_attn_viz.png" alt="attention">
+  <br>
+  <em></em>
+</p>
+
 # References
 * https://proceedings.neurips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf
 * https://github.com/lucidrains/x-transformers
